@@ -1,0 +1,13 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key green background (#00FF00). No gradients, no ground shadows, no floor — characters float on pure green.
+
+Character (identical in all four quadrants, based on the tiger in the attached reference photo): a fierce orange Bengal tiger with black stripes and white chest, chasing at full sprint. Slightly stylized cute-but-menacing 3D cartoon game style to match a mobile game (NOT photoreal), intense yellow eyes, mouth open showing teeth.
+
+Style: clean crisp silhouette edges, vibrant colors, FULL BODY side view facing RIGHT, same character scale in every quadrant, each fully inside its own quadrant with margin, never touching quadrant borders.
+
+Four quadrants = four phases of a running gallop cycle:
+- Top-left: full stretch — front legs reaching forward, hind legs extended back, body stretched long.
+- Top-right: gather — all four paws pulled under the body, back arched high.
+- Bottom-left: front paws landing, hind legs swinging forward.
+- Bottom-right: push-off — hind legs driving back, front legs lifting, head low and lunging.
+
+Absolutely no text labels, no grid lines, no watermark, no background scenery.

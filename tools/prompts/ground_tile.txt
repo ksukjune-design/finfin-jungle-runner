@@ -1,0 +1,7 @@
+A side-scroller game GROUND STRIP asset on a pure flat solid chroma-key magenta background (#FF00FF).
+
+The ground strip runs horizontally across the full width of the image, occupying roughly the bottom 60% of the image. Cross-section side view: the flat top surface is a brown jungle dirt path with small tufts of grass, tiny pebbles and a few fallen leaves on the edge; below the surface is darker brown soil with small rocks and roots (cross-section like a platformer game tile).
+
+Style: cute stylized 3D cartoon mobile game art, vibrant, clean edges. The top surface line must be perfectly horizontal and flat (a character will run along it). The left and right edges of the strip must reach the image borders and have similar texture so it can tile horizontally.
+
+Everything above the ground surface must be pure flat magenta (#FF00FF). No characters, no text, no watermark.

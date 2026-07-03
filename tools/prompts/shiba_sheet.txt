@@ -1,0 +1,12 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key green background (#00FF00). No gradients, no ground shadows, no floor — characters float on pure green.
+
+Character (identical in all four quadrants, from the attached reference photo): a cute Shiba Inu dog with orange-cream fur, wearing a white headband with Korean text "등원은 재밌쟁", riding a pink "FINFIN" kids balance bike — IMPORTANT: a balance bike has NO pedals and NO chain; black EVA wheels, black handlebar grips, black saddle, "FINFIN" logo on the pink frame. The dog's front paws grip the handlebar.
+
+Style: cute stylized 3D-rendered cartoon game character (mobile game quality), clean crisp silhouette edges, vibrant colors, FULL BODY side view facing RIGHT, same character scale in every quadrant, each character fully inside its own quadrant with margin, never touching quadrant borders.
+
+- Top-left quadrant: gliding fast — both hind legs tucked up onto the bike frame, body low, ears back.
+- Top-right quadrant: kick pose A — one hind leg stretched far back, paw pushing off the ground (how a balance bike accelerates).
+- Bottom-left quadrant: kick pose B — hind leg forward under the body about to push, other leg on bike.
+- Bottom-right quadrant: jump — fully airborne, bike nose tilted up ~20 degrees, hind legs tucked, ears flying up, happy determined expression.
+
+Absolutely no text labels, no grid lines, no watermark, no background scenery.

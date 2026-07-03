@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d2416">
+<title>핀핀 정글 등원 대작전</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- 게임 캔버스 -->
+    <canvas id="game"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div class="hud-row">
+        <div id="score" class="pill">0m</div>
+        <div id="bones" class="pill">🦴 0</div>
+      </div>
+      <div id="tigerbar-wrap">
+        <span class="tiger-icon">🐯</span>
+        <div id="tigerbar"><div id="tigerbar-fill"></div></div>
+        <span class="dog-icon">🐕</span>
+      </div>
+      <div id="toast" class="hidden"></div>
+    </div>
+
+    <!-- 인트로 동영상 -->
+    <div id="intro" class="screen hidden">
+      <video id="introVideo" src="assets/video/intro.mp4" playsinline webkit-playsinline preload="auto"></video>
+      <button id="skipBtn">건너뛰기 ▶</button>
+    </div>
+
+    <!-- 시작 화면 -->
+    <div id="start" class="screen">
+      <video id="posterVideo" src="assets/video/intro.mp4" playsinline webkit-playsinline preload="auto" muted></video>
+      <div class="start-shade"></div>
+      <div class="start-content">
+        <p class="badge">FINFIN 밸런스바이크 PRO V2</p>
+        <h1>정글 등원<br>대작전</h1>
+        <p class="subtitle">등원은 재밌쟁! 🐕 페달 없이 씽씽~<br>호랑이 🐯 보다 빨리 유치원까지 달려라!</p>
+        <button id="startBtn">등원 시작!</button>
+        <p class="hint">화면을 탭하면 점프 · 공중에서 한 번 더 탭하면 2단 점프<br>세로·가로 화면 모두 지원 📱</p>
+      </div>
+    </div>
+
+    <!-- 카운트다운 -->
+    <div id="countdown" class="screen hidden"><span id="countNum">3</span></div>
+
+    <!-- 게임 오버 -->
+    <div id="gameover" class="screen hidden">
+      <div class="go-shade"></div>
+      <div class="go-content">
+        <h2>잡혔다멍…! 😱</h2>
+        <div class="go-stats">
+          <div class="go-score"><span id="goScore">0</span>m</div>
+          <div class="go-sub">🦴 <span id="goBones">0</span>개 &nbsp;·&nbsp; 최고 기록 <span id="goBest">0</span>m</div>
+        </div>
+        <button id="retryBtn">다시 등원하기 🚲</button>
+        <button id="introBtn" class="ghost">인트로 다시보기 🎬</button>
+      </div>
+    </div>
+
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>

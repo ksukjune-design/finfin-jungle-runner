@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "finfin-game",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["tools/server.js"],
+      "port": 8080
+    }
+  ]
+}

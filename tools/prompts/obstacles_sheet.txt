@@ -1,0 +1,10 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key magenta background (#FF00FF). No gradients, no ground shadows, no floor — objects float on pure magenta.
+
+Style: cute stylized 3D-rendered cartoon mobile game props, matching a lush jungle adventure runner game, clean crisp silhouette edges, vibrant saturated colors. Each object fully inside its own quadrant with margin, never touching quadrant borders. Side view as seen in a side-scrolling game.
+
+- Top-left quadrant: a big rounded grey jungle boulder with a little green moss on top.
+- Top-right quadrant: a fallen brown tree log lying horizontally, with dark bark texture and a few small green leaves sprouting.
+- Bottom-left quadrant: a spiky tropical plant with sharp dark-green and red-tipped leaves pointing upward, dangerous looking but cute.
+- Bottom-right quadrant: a cartoon dog-treat bone snack, cream white, shiny, slightly glowing golden outline (collectible item).
+
+Absolutely no text labels, no grid lines, no watermark, no background scenery, nothing magenta or pink colored on the objects themselves.

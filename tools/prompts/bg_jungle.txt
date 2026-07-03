@@ -1,0 +1,5 @@
+A lush dense green jungle background for a side-scrolling mobile runner game, matching the atmosphere of the attached reference photo (deep green tropical forest with a dirt path). Stylized painterly 3D cartoon game art, mobile game quality.
+
+Composition: horizontal landscape scene for parallax scrolling. Layers of tropical trees, hanging vines, big leaves and ferns fading into a misty deep-green distance. Soft god rays of sunlight from the top. The bottom 15% of the image transitions to slightly darker foliage (game ground will be drawn over it).
+
+IMPORTANT: absolutely NO characters, NO animals, NO path, NO objects in focus — background scenery only. The left and right edges of the image should have similar brightness and similar foliage density so it can loop when scrolled. No text, no watermark.
