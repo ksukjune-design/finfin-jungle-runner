@@ -372,7 +372,7 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
   if (G.shots) for (const s of G.shots) { s.x *= rx; s.y = groundY - (oldGroundY - s.y) * rs; s.vy *= rs; s.vx *= rs; }
   for (const s of G.signs) s.x *= rx;
   for (const t of G.hints) t.x *= rx;
-  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 950 * SC;
+  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 1045 * SC;
   G.spawnPx *= rx;
   G.parts = []; G.pops = [];
 }
@@ -388,7 +388,7 @@ const G = {};
 let runFrom = 0; // 체크포인트 시작 지점 (m)
 
 // ---------- 다이내믹 카메라 / 슬로모션 / 컷인 (레이싱 연출 코어) ----------
-const cam = { z: 1, punchZ: 1, punchT: 0, punchDur: 0.5 };
+const cam = { z: 1, punchZ: 1, punchT: 0, punchDur: 0.5, y: 0 };
 function camPunch(z, dur = 0.55) { cam.punchZ = z; cam.punchT = dur; cam.punchDur = dur; }
 function camTick(dt) {
   // 기본 줌: 속도가 붙을수록 살짝 와이드 (질주감)
@@ -399,9 +399,14 @@ function camTick(dt) {
     target = target + (cam.punchZ - target) * (k * k * (3 - 2 * k)); // smoothstep 감쇠
   }
   cam.z += (target - cam.z) * Math.min(1, dt * 7);
+  // 점프 상하 팔로우 (부드러운 수직 시차 — 위 46SC, 낙하 시 아래 80SC 한도)
+  const ty = G.player ? Math.max(-80 * SC, Math.min(46 * SC, (groundY - G.player.y) * 0.12)) : 0;
+  cam.y += (ty - cam.y) * Math.min(1, dt * 6);
 }
 function applyCam() {
-  if (Math.abs(cam.z - 1) < 0.001 || !G.player) return;
+  if (!G.player) return;
+  if (Math.abs(cam.y) > 0.5) ctx.translate(0, cam.y);
+  if (Math.abs(cam.z - 1) < 0.001) return;
   const p = G.player;
   // 플레이어 상체를 초점으로 줌 (화면 중심과 블렌드해 과도한 시프트 방지)
   const fx = p.x * 0.7 + W * 0.5 * 0.3;
@@ -481,10 +486,10 @@ function drawCutIn() {
   ctx.globalAlpha = 1;
 }
 function resetGame(fromM = runFrom) {
-  G.speed = 410 * SC;
-  G.baseSpeed = 410 * SC;
-  G.maxSpeed = 950 * SC;
-  cam.z = 1; cam.punchT = 0;
+  G.speed = 450 * SC;
+  G.baseSpeed = 450 * SC;
+  G.maxSpeed = 1045 * SC;
+  cam.z = 1; cam.punchT = 0; cam.y = 0;
   ts = 1; tsHold = 0;
   G.cutIn = null;
   G.score = 0;
@@ -1242,7 +1247,7 @@ function update(dt) {
   if (state !== ST.RUN) return;
 
   // 속도 (피버/부스터 배속) — 레이싱 체감 상향
-  const ramp = 5.7 * SC;
+  const ramp = 6.3 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
   let target = G.baseSpeed * (bike().speedMult || 1);
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
@@ -1660,6 +1665,9 @@ function stageBg(i) {
 }
 function draw() {
   ctx.clearRect(0, 0, W, H);
+  // 카메라 이동/줌아웃 시 노출되는 가장자리를 어두운 베이스로 커버
+  ctx.fillStyle = '#0a1a0e';
+  ctx.fillRect(0, 0, W, H);
   ctx.save();
   applyCam();
   if (G.shake > 0) ctx.translate((Math.random() - 0.5) * 14 * G.shake, (Math.random() - 0.5) * 14 * G.shake);
@@ -1735,11 +1743,12 @@ function drawBG() {
   const cur = stageBg(G.stage);
   if (!cur || !cur.width) { ctx.fillStyle = '#12331d'; ctx.fillRect(0, 0, W, H); return; }
   const bh = groundY + 30 * SC;
+  const oh = 70 * SC; // 상단 오버스캔 (카메라 팔로우/줌아웃 대비)
   const drawOne = (im, alpha) => {
     if (!im || !im.width) return;
     const bw = bh * (im.width / im.height);
     ctx.globalAlpha = alpha;
-    tileLoop(bw, G.worldX * 42 * SC * 0.30, (bx, m) => drawMirrorTile(im, bx, 0, bw, bh, m));
+    tileLoop(bw, G.worldX * 42 * SC * 0.30, (bx, m) => drawMirrorTile(im, bx, -oh, bw, bh + oh, m));
     ctx.globalAlpha = 1;
   };
   if (G.stageFade < 1) {
@@ -1862,7 +1871,14 @@ function drawObstacles() {
     } else if (o.kind === 'toucan') {
       const im = (Math.floor(o.t * 7) % 2 === 0 ? img.toucan1 : img.toucan2) || img.toucan1;
       const y = o.y0 + Math.sin(o.t * 3) * 10 * SC;
-      if (im && im.width) ctx.drawImage(im, o.x, y - o.dh * 0.5, o.dw, o.dh);
+      if (im && im.width) {
+        // 급강하 기울기 (상하 이동 방향으로 부드럽게 틸트)
+        ctx.save();
+        ctx.translate(o.x + o.dw / 2, y);
+        ctx.rotate(Math.cos(o.t * 3) * 0.12 - 0.06);
+        ctx.drawImage(im, -o.dw / 2, -o.dh * 0.5, o.dw, o.dh);
+        ctx.restore();
+      }
       else { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.ellipse(o.x + o.dw / 2, y, o.dw * 0.4, o.dh * 0.3, 0, 0, Math.PI * 2); ctx.fill(); }
       // 접근 경고
       if (o.x > W - 40 * SC) {
@@ -2039,10 +2055,14 @@ function drawPlayer() {
     }
     ctx.globalAlpha = 1;
   }
-  if (p.invuln > 0 && Math.floor(p.invuln * 12) % 2 === 0) ctx.globalAlpha = 0.35;
+  // 부드러운 무적 점멸 (사인파 페이드 — 딱딱한 토글 제거)
+  if (p.invuln > 0) ctx.globalAlpha = 0.55 + 0.35 * Math.sin(p.invuln * 26);
+  // 주행 바운스 (지면 캐던스 라이딩감)
+  const rideBob = (p.onGround && !p.sliding && !p.falling)
+    ? Math.sin(p.anim * 5.2) * 2.4 * SC * Math.min(1, G.speed / (G.maxSpeed * 0.55)) : 0;
   ctx.save();
-  ctx.translate(p.x, p.y);
-  ctx.rotate(ang);
+  ctx.translate(p.x, p.y + rideBob);
+  ctx.rotate(ang + (rideBob ? Math.sin(p.anim * 5.2 + 0.9) * 0.016 : 0));
   if (p.onGround || p.y > groundY - 240 * SC) {
     const sh = Math.max(0.25, 1 - (groundY - p.y) / (260 * SC));
     ctx.save();
