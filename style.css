@@ -312,6 +312,97 @@ html, body {
 .ach-txt small { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 1px; }
 .ach-check { color: #7dff9e; font-weight: 900; font-size: 17px; }
 
+/* ---------- 카툰 이벤트 (약올리기 + 퍼크) ---------- */
+.event-panel { max-width: min(92vw, 460px); padding: 20px 22px; }
+.gag-row {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; margin-bottom: 8px;
+  animation: gagIn .4s ease-out backwards;
+}
+.gag-right { flex-direction: row; justify-content: flex-end; animation-delay: .45s; }
+@keyframes gagIn {
+  from { opacity: 0; transform: translateY(12px) scale(.92); }
+  to { opacity: 1; transform: none; }
+}
+.gag-face {
+  width: 64px; height: 64px; object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.4));
+  flex-shrink: 0;
+}
+.bubble {
+  position: relative;
+  background: #fff; color: #22301f;
+  border-radius: 16px; padding: 10px 14px;
+  font-size: 14.5px; font-weight: 800; line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
+}
+.bubble-s::before {
+  content: ''; position: absolute; left: -8px; top: 24px;
+  border: 8px solid transparent; border-right-color: #fff; border-left: 0;
+}
+.bubble-t { background: #ffe3c8; }
+.bubble-t::after {
+  content: ''; position: absolute; right: -8px; top: 24px;
+  border: 8px solid transparent; border-left-color: #ffe3c8; border-right: 0;
+}
+.event-sub { color: #ffe9a8; font-size: 13px; font-weight: 700; margin: 8px 0 10px; }
+#perkCards { display: flex; gap: 8px; width: 100%; }
+.panel button.perk-card {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  font-family: inherit;
+  background: linear-gradient(180deg, #1d4a2c, #123420);
+  border: 1.5px solid rgba(255,232,168,.4);
+  border-radius: 14px; padding: 12px 6px;
+  color: #fff; cursor: pointer;
+  box-shadow: 0 4px 0 rgba(0,0,0,.35);
+  transition: transform .1s;
+  animation: gagIn .35s ease-out backwards;
+  font-size: 13px; margin-top: 0;
+}
+.perk-card:nth-child(2) { animation-delay: .1s; }
+.perk-card:nth-child(3) { animation-delay: .2s; }
+.perk-card:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.35); }
+.perk-icon { font-size: 28px; }
+.perk-card b { font-size: 13.5px; color: #ffe9a8; }
+.perk-card small { font-size: 11px; color: rgba(255,255,255,.8); line-height: 1.35; }
+
+/* ---------- 바이크 차고 ---------- */
+.garage-panel { max-height: 82vh; }
+#bikeList {
+  overflow-y: auto; width: min(80vw, 350px);
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.panel button.bike-card {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left;
+  font-family: inherit;
+  background: rgba(255,255,255,.05);
+  border: 1.5px solid rgba(255,255,255,.15);
+  border-radius: 14px; padding: 10px 12px;
+  color: #fff; cursor: pointer;
+  box-shadow: none; font-size: 14px; margin-top: 0;
+}
+.bike-card + .bike-card { margin-top: 6px; }
+.bike-card.sel { border-color: #ffd75e; background: rgba(255,215,94,.12); }
+.bike-card.locked { opacity: .45; cursor: default; }
+.bike-chip { width: 12px; height: 34px; border-radius: 6px; flex-shrink: 0; }
+.bike-icon { font-size: 24px; width: 30px; text-align: center; }
+.bike-txt { flex: 1; display: flex; flex-direction: column; }
+.bike-txt b { font-size: 14.5px; }
+.bike-txt small { font-size: 11.5px; color: rgba(255,255,255,.7); margin-top: 1px; line-height: 1.35; }
+.bike-sel { color: #ffd75e; font-size: 11.5px; font-weight: 900; white-space: nowrap; }
+.title-row { display: flex; gap: 8px; margin-top: 12px; }
+.title-row .ghost { margin-top: 0; }
+#garageBtn, #achBtn {
+  font-family: inherit;
+  background: rgba(0,0,0,.45); color: #fff;
+  border: 1.5px solid rgba(255,255,255,.5);
+  border-radius: 999px; padding: 12px 22px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  backdrop-filter: blur(3px);
+}
+
 /* ---------- 게임 오버 ---------- */
 #gameover {
   background: url('assets/sprites/gameover.jpg') center/cover no-repeat #120a04;
@@ -410,4 +501,12 @@ html, body {
   .ach-panel { max-height: 88vh; }
   #achList { max-height: 46vh; }
   .zone { padding-bottom: 8vh; }
+  .gag-face { width: 44px; height: 44px; }
+  .bubble { font-size: 12.5px; padding: 7px 11px; }
+  .event-sub { margin: 4px 0 6px; font-size: 11.5px; }
+  .perk-icon { font-size: 22px; }
+  .perk-card { padding: 8px 5px; }
+  #bikeList { max-height: 48vh; }
+  .title-row { margin-top: 8px; }
+  #garageBtn, #achBtn { padding: 8px 16px; font-size: 12.5px; }
 }

@@ -1,0 +1,12 @@
+Create a 1x2 sprite sheet: two equal side-by-side cells on a pure flat solid chroma-key MAGENTA background (#FF00FF). No gradients, no shadows, no floor. (Magenta because the character is green.)
+
+Character (identical snake in both cells): a cute-but-menacing cartoon JUNGLE SNAKE, bright green with darker green diamond patterns and a pale yellow belly, coiled body low to the ground, facing LEFT with playful angry eyes and a tiny red forked tongue.
+
+- Left cell: head held LOW, level with the coiled body (compact, ground-hugging pose).
+- Right cell: head raised UP high on an S-curved neck, mouth slightly open (striking pose).
+
+Same body size and position within each cell, fully inside its cell with margin, never touching cell borders.
+
+Style: cute stylized 3D-rendered cartoon game character (mobile game quality), clean crisp silhouette edges, vibrant colors, side view facing LEFT.
+
+Absolutely no text, no watermark, no background scenery, no grid lines.

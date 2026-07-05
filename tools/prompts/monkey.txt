@@ -1,0 +1,7 @@
+Single game character sprite on a pure flat solid chroma-key MAGENTA background (#FF00FF). No gradients, no shadows, no floor.
+
+Character: a mischievous cute cartoon MONKEY, warm brown fur with a tan face and belly, sitting on a small tree stump, facing LEFT. One arm is raised HIGH above its head holding a round brown COCONUT, wind-up pose as if about to throw it to the left. Cheeky grin, one eyebrow raised.
+
+Style: cute stylized 3D-rendered cartoon game character (mobile game quality), clean crisp silhouette edges, vibrant colors, side view facing LEFT, full body inside the frame with generous margin.
+
+Absolutely no text, no watermark, no background scenery.

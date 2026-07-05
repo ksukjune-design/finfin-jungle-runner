@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d2416">
 <title>핀핀 정글 등원 대작전</title>
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <div id="app">
@@ -59,7 +59,10 @@
         <p class="subtitle">등원은 재밌쟁! 🐕 페달 없이 씽씽~<br>호랑이 🐯 보다 빨리 유치원까지 달려라!</p>
         <p id="titleMeta"></p>
         <button id="startBtn">등원 시작!</button>
-        <button id="achBtn" class="ghost">🏅 도전과제</button>
+        <div class="title-row">
+          <button id="garageBtn" class="ghost">🚲 바이크 차고</button>
+          <button id="achBtn" class="ghost">🏅 도전과제</button>
+        </div>
         <p class="hint">오른쪽 탭 = 점프(2번 탭 2단 점프) · 왼쪽 꾹 = 슬라이드<br>세로·가로 화면 모두 지원 📱</p>
       </div>
     </div>
@@ -84,6 +87,31 @@
         <p class="revive-sub">딱 한 번 다시 달릴 수 있다멍!</p>
         <button id="reviveBtn">🦴 이어서 달리기! <span id="reviveCnt" class="revive-cnt">4</span></button>
         <button id="reviveSkip" class="ghost">그만 달릴래…</button>
+      </div>
+    </div>
+
+    <!-- 카툰 약올리기 이벤트 + 퍼크 선택 -->
+    <div id="event" class="overlay hidden">
+      <div class="panel event-panel">
+        <div class="gag-row">
+          <img class="gag-face" src="assets/sprites/face_shiba.png" alt="시바">
+          <div class="bubble bubble-s"><span id="gagShiba"></span></div>
+        </div>
+        <div class="gag-row gag-right">
+          <div class="bubble bubble-t"><span id="gagTiger"></span></div>
+          <img class="gag-face" src="assets/sprites/face_tiger.png" alt="호랑이">
+        </div>
+        <p class="event-sub">숨 고르기 찬스! 하나 골라 가자 🎁</p>
+        <div id="perkCards"></div>
+      </div>
+    </div>
+
+    <!-- 바이크 차고 -->
+    <div id="garage" class="overlay hidden">
+      <div class="panel garage-panel">
+        <h3>🚲 바이크 차고</h3>
+        <div id="bikeList"></div>
+        <button id="garageClose">닫기</button>
       </div>
     </div>
 
@@ -122,6 +150,6 @@
     </div>
 
   </div>
-  <script src="game.js?v=3"></script>
+  <script src="game.js?v=4"></script>
 </body>
 </html>

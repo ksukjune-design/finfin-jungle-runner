@@ -27,6 +27,8 @@ const ui = {
   pause: $('pause'), resumeBtn: $('resumeBtn'), quitBtn: $('quitBtn'), pMuteBtn: $('pMuteBtn'),
   revive: $('revive'), reviveBtn: $('reviveBtn'), reviveCnt: $('reviveCnt'), reviveSkip: $('reviveSkip'),
   achPanel: $('achPanel'), achList: $('achList'), achClose: $('achClose'),
+  event: $('event'), garage: $('garage'), garageBtn: $('garageBtn'),
+  bikeList: $('bikeList'), garageClose: $('garageClose'),
 };
 
 // ---------- 저장 ----------
@@ -61,6 +63,11 @@ const IMG_SRC = {
   powMagnet:'assets/sprites/pow_2.png',
   powBoost:'assets/sprites/pow_3.png',
   powGold:'assets/sprites/pow_4.png',
+  snake1:'assets/sprites/snake_1.png',
+  snake2:'assets/sprites/snake_2.png',
+  monkey:'assets/sprites/monkey.png',
+  faceShiba:'assets/sprites/face_shiba.png',
+  faceTiger:'assets/sprites/face_tiger.png',
   ground:'assets/sprites/ground.png',
   bg:    'assets/sprites/bg_jungle.jpg',
   bgSunset:'assets/sprites/bg_sunset.jpg',
@@ -78,6 +85,76 @@ function loadAssets() {
       img[k].src = IMG_SRC[k];
     });
   });
+}
+
+// ---------- 바이크 로스터 (도전과제로 해금, 로그라이크 특성) ----------
+const BIKES = {
+  pink:   { name: '핑크 핀핀',   icon: '🚲', hue: null, jumps: 2, desc: '밸런스형 기본 바이크 · 2단 점프', unlock: null },
+  rocket: { name: '로켓 핀핀',   icon: '🚀', hue: 18,  jumps: 3, desc: '3단 점프 부스터 프레임!', unlock: 'm1000', speedMult: 1.02 },
+  low:    { name: '로우라이더',  icon: '🐍', hue: 275, jumps: 2, desc: '낮은 차체 — 가지·새 밑 자동 통과', unlock: 'slide50', jumpMult: 0.95 },
+  wing:   { name: '날개 핀핀',   icon: '🪽', hue: 205, jumps: 2, desc: '구덩이 위 활공! 대신 살짝 느림', unlock: 'm2000', speedMult: 0.93 },
+  tank:   { name: '탱크 핀핀',   icon: '🛡️', hue: 120, jumps: 2, desc: '새를 튕겨냄 · 피격 반감 · 느림', unlock: 'nohit700', speedMult: 0.88 },
+};
+let bikeId = store.get('finfin_bike', 'pink');
+function bike() { return BIKES[bikeId] || BIKES.pink; }
+function bikeUnlocked(id) { const b = BIKES[id]; return !b.unlock || !!achState[b.unlock]; }
+if (!bikeUnlocked(bikeId)) bikeId = 'pink';
+
+// 스프라이트 색상 리매핑: 핑크 프레임(hue 300~360)만 바이크 색으로 변경
+const SHIBA_KEYS = ['shiba1', 'shiba2', 'shiba3', 'shiba4', 'shibaSlide'];
+const tinted = {};
+function buildTint(id) {
+  const b = BIKES[id];
+  if (!b || b.hue === null || tinted[id]) return;
+  for (const k of SHIBA_KEYS) if (!img[k] || !img[k].width) return; // 로딩 전이면 다음에
+  tinted[id] = {};
+  for (const k of SHIBA_KEYS) {
+    const src = img[k];
+    const c = document.createElement('canvas');
+    c.width = src.width; c.height = src.height;
+    const cc = c.getContext('2d');
+    cc.drawImage(src, 0, 0);
+    try {
+      const d = cc.getImageData(0, 0, c.width, c.height);
+      const px = d.data;
+      for (let i = 0; i < px.length; i += 4) {
+        if (px[i + 3] < 10) continue;
+        const r = px[i] / 255, g = px[i + 1] / 255, bl = px[i + 2] / 255;
+        const mx = Math.max(r, g, bl), mn = Math.min(r, g, bl);
+        const l = (mx + mn) / 2, dl = mx - mn;
+        if (dl < 0.06) continue;
+        const s = dl / (1 - Math.abs(2 * l - 1));
+        let h;
+        if (mx === r) h = ((g - bl) / dl) % 6;
+        else if (mx === g) h = (bl - r) / dl + 2;
+        else h = (r - g) / dl + 4;
+        h = (h * 60 + 360) % 360;
+        // 핑크/로즈 프레임 픽셀만 (강아지 주황 털 hue ~15-45 제외)
+        if ((h >= 300 || h < 8) && s > 0.12 && l > 0.25 && l < 0.92) {
+          const nh = b.hue / 60;
+          const cch = (1 - Math.abs(2 * l - 1)) * s;
+          const xx = cch * (1 - Math.abs((nh % 2) - 1));
+          const m = l - cch / 2;
+          let rr, gg, bb;
+          if (nh < 1) { rr = cch; gg = xx; bb = 0; }
+          else if (nh < 2) { rr = xx; gg = cch; bb = 0; }
+          else if (nh < 3) { rr = 0; gg = cch; bb = xx; }
+          else if (nh < 4) { rr = 0; gg = xx; bb = cch; }
+          else if (nh < 5) { rr = xx; gg = 0; bb = cch; }
+          else { rr = cch; gg = 0; bb = xx; }
+          px[i] = Math.round((rr + m) * 255);
+          px[i + 1] = Math.round((gg + m) * 255);
+          px[i + 2] = Math.round((bb + m) * 255);
+        }
+      }
+      cc.putImageData(d, 0, 0);
+    } catch (e) { /* CORS 등 실패 시 원본 사용 */ }
+    tinted[id][k] = c;
+  }
+}
+function bikeImg(k) {
+  const t = tinted[bikeId];
+  return (t && t[k] && t[k].width) ? t[k] : img[k];
 }
 
 // ---------- 사운드 (WebAudio 합성음) ----------
@@ -164,6 +241,7 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
   for (const h of G.holes) { h.x *= rx; h.w *= rs; }
   for (const b of G.bones) { b.x *= rx; b.y = groundY - (oldGroundY - b.y) * rs; }
   for (const w of G.pows) { w.x *= rx; w.y = groundY - (oldGroundY - w.y) * rs; }
+  if (G.shots) for (const s of G.shots) { s.x *= rx; s.y = groundY - (oldGroundY - s.y) * rs; s.vy *= rs; s.vx *= rs; }
   for (const s of G.signs) s.x *= rx;
   for (const t of G.hints) t.x *= rx;
   G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 780 * SC;
@@ -175,7 +253,7 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 60));
 resize();
 
 // ---------- 게임 상태 ----------
-const ST = { MENU: 0, INTRO: 1, COUNT: 2, RUN: 3, CAUGHT: 4, OVER: 5, PAUSE: 6, REVIVE: 7 };
+const ST = { MENU: 0, INTRO: 1, COUNT: 2, RUN: 3, CAUGHT: 4, OVER: 5, PAUSE: 6, REVIVE: 7, EVENT: 8 };
 let state = ST.MENU;
 
 const G = {};
@@ -189,9 +267,16 @@ function resetGame() {
   G.player = {
     x: W * 0.30, y: groundY, vy: 0,
     onGround: true, jumps: 0, anim: 0, invuln: 0, falling: false,
-    sliding: false, slideLock: 0, fastFall: false,
+    sliding: false, slideLock: 0, fastFall: false, gliding: false,
     w: 128 * SC, h: 128 * SC,
   };
+  buildTint(bikeId);
+  // 로그라이크 런 상태
+  G.perks = {};
+  G.shots = [];        // 코코넛 등 투사체
+  G.nextEventAt = 850;
+  G.eventCnt = 0;
+  G.rainT = 0; G.rainNext = 550 + Math.random() * 500;
   G.tiger = { anim: 0, lunge: 0 };
   G.obstacles = [];   // {kind, x, dw, dh, ...} branch: barBottom / toucan: y0,t
   G.holes = [];
@@ -250,10 +335,72 @@ function unlock(id) {
   store.set('finfin_ach', achState);
   const a = ACH.find(a => a.id === id);
   G.newAch && G.newAch.push(a);
-  showToast(`🏅 도전과제 달성 — ${a.name}!`);
+  const bk = Object.keys(BIKES).find(k => BIKES[k].unlock === id);
+  showToast(bk ? `🏅 ${a.name}! 🚲 차고에 [${BIKES[bk].name}] 해금!` : `🏅 도전과제 달성 — ${a.name}!`);
   sfx.record(); vib([30, 40, 60]);
 }
 function achCount() { return ACH.filter(a => achState[a.id]).length; }
+
+// ---------- 카툰 약올리기 이벤트 + 로그라이크 퍼크 ----------
+const GAGS = [
+  { s: '메롱~ 🐕 못 잡지롱!', t: '어흥!! 오늘은 꼭 잡는다!!' },
+  { s: '난 밥이 아니라 등원생이다멍!', t: '거기 서!! 아침밥아!!' },
+  { s: '페달? 없어도 씽씽~ 발이 모터거든!', t: '그거 반칙 아니냐고!!!' },
+  { s: '호랑이도 지치는구나~ 메롱!', t: '헥헥… 자, 잠깐 타임…' },
+  { s: '유치원 늦겠다! 비켜비켜~', t: '지각시키는 게 내 오늘 목표다!!' },
+  { s: '이 바이크? 핀핀! 어른들한테 물어봐~', t: '그 자전거… 나도 하나 사줘…' },
+  { s: '꼬리 밟을 뻔했잖아! 조심해!', t: '그건 내 대사라고!!' },
+  { s: '뼈다귀 하나 나눠줄까? 히히', t: '어흥!! (배에서 꼬르르륵…)' },
+];
+const PERKS = [
+  { id: 'boneUp',    icon: '🦴', name: '간식의 힘',     desc: '뼈다귀 점수 1.5배',            apply() { G.perks.boneMult = 1.5; } },
+  { id: 'feverFast', icon: '🌈', name: '피버 부스트',   desc: '피버 게이지가 더 빨리 참',      apply() { G.perks.feverNeed = 12; } },
+  { id: 'miniMag',   icon: '🧲', name: '자석 코팅',     desc: '약한 자석 효과가 계속 유지',    apply() { G.perks.miniMag = true; } },
+  { id: 'helmet',    icon: '⛑️', name: '안전모 지급',   desc: '지금 바로 헬멧 장착!',          apply() { G.shield = true; } },
+  { id: 'tigerPush', icon: '💨', name: '전력 질주',     desc: '호랑이와의 거리가 확 벌어짐',   apply() { G.tigerDist = Math.min(100, G.tigerDist + 28); } },
+  { id: 'near2',     icon: '😎', name: '곡예사의 혼',   desc: '아슬아슬 보너스 2배 (+60)',     apply() { G.perks.near2 = true; } },
+  { id: 'slideTurbo',icon: '🐍', name: '림보 터보',     desc: '슬라이드 중 피버 게이지 충전',  apply() { G.perks.slideTurbo = true; } },
+  { id: 'boostLong', icon: '🚀', name: '오래가는 부스터', desc: '부스터 지속시간 1.5배',      apply() { G.perks.boostLong = true; } },
+  { id: 'tigerRegen',icon: '🐾', name: '지구력 훈련',   desc: '호랑이가 더 빨리 뒤처짐',       apply() { G.perks.tigerRegen = true; } },
+];
+function startEvent() {
+  state = ST.EVENT;
+  G.eventCnt++;
+  const gag = GAGS[(Math.random() * GAGS.length) | 0];
+  $('gagShiba').textContent = gag.s;
+  $('gagTiger').textContent = gag.t;
+  // 중복 없는 퍼크 3장 (이미 가진 지속 퍼크 제외)
+  const pool = PERKS.filter(pk => !G.perks[pk.id] && !(pk.id === 'helmet' && G.shield));
+  const cards = [];
+  while (cards.length < 3 && pool.length) {
+    cards.push(pool.splice((Math.random() * pool.length) | 0, 1)[0]);
+  }
+  const wrap = $('perkCards');
+  wrap.innerHTML = cards.map((pk, i) =>
+    `<button class="perk-card" data-i="${i}">
+      <span class="perk-icon">${pk.icon}</span>
+      <b>${pk.name}</b><small>${pk.desc}</small>
+    </button>`).join('');
+  wrap.querySelectorAll('.perk-card').forEach(btn => {
+    btn.onclick = () => { sfx.power(); pickPerk(cards[+btn.dataset.i]); };
+  });
+  ui.event.classList.remove('hidden');
+  sfx.stage(); vib(30);
+}
+function pickPerk(pk) {
+  if (state !== ST.EVENT) return;
+  pk.apply();
+  showToast(`${pk.icon} ${pk.name}!`);
+  endEvent();
+}
+function endEvent() {
+  ui.event.classList.add('hidden');
+  state = ST.RUN;
+  const p = G.player;
+  p.invuln = Math.max(p.invuln, 1.2);
+  G.spawnPx = Math.max(G.spawnPx, 550 * SC);   // 복귀 여유
+  G.nextEventAt = G.worldX + 850 + Math.random() * 250;
+}
 
 // ---------- 입력 (오른쪽 탭=점프 · 왼쪽 홀드=슬라이드) ----------
 const input = { slidePointers: new Set(), keySlide: false };
@@ -263,12 +410,17 @@ function jumpInput() {
   const p = G.player;
   if (p.falling) return;
   if (p.sliding) { p.sliding = false; p.slideLock = 0; }
+  const jm = bike().jumpMult || 1;
   if (p.onGround) {
-    p.vy = -1120 * SC; p.onGround = false; p.jumps = 1;
+    p.vy = -1120 * SC * jm; p.onGround = false; p.jumps = 1;
     sfx.jump(); dust(p.x, groundY, 8);
-  } else if (p.jumps === 1) {
-    p.vy = -980 * SC; p.jumps = 2;
+  } else if (p.jumps < bike().jumps) {
+    p.vy = -(p.jumps >= 2 ? 900 : 980) * SC * jm; p.jumps++;
     sfx.djump(); dust(p.x, p.y, 6, true);
+    if (p.jumps >= 3) { // 로켓 3단 점프 화염
+      sparkle(p.x, p.y + 10 * SC, 10, '255,150,60');
+      sfx.boost();
+    }
   }
 }
 function slidePress() {
@@ -387,6 +539,29 @@ function addToucan(x) {
 function addPow(kind, x, y) {
   G.pows.push({ kind, x, y: y || groundY - 150 * SC, t: Math.random() * 6 });
 }
+function addSnake(x) {
+  const dw = 118 * SC;
+  const ratio = img.snake1 && img.snake1.width ? img.snake1.height / img.snake1.width : 0.85;
+  G.obstacles.push({ kind: 'snake', x, dw, dh: dw * ratio, t: Math.random() * 6, minClear: 1e9 });
+}
+function addBoulder(x) {
+  const dw = 92 * SC;
+  G.obstacles.push({ kind: 'boulder', x, dw, dh: dw, rot: 0, minClear: 1e9 });
+}
+function addBees(x) {
+  G.obstacles.push({ kind: 'bees', x, dw: 84 * SC, dh: 60 * SC, y0: groundY - 102 * SC, t: Math.random() * 6, minClear: 1e9 });
+}
+function addMud(x) {
+  G.obstacles.push({ kind: 'mud', x, dw: 150 * SC, dh: 16 * SC, mudCd: 0, minClear: 1e9 });
+}
+function addMonkey(x) {
+  const dw = 110 * SC;
+  const ratio = img.monkey && img.monkey.width ? img.monkey.height / img.monkey.width : 1.9;
+  G.obstacles.push({ kind: 'monkey', x, dw, dh: dw * ratio, thrown: false, t: 0, minClear: 1e9 });
+}
+function addWisp(x) {
+  G.obstacles.push({ kind: 'wisp', x, dw: 52 * SC, dh: 52 * SC, y0: groundY - 92 * SC, t: Math.random() * 6, minClear: 1e9 });
+}
 function boneArc(x, arc) {
   const n = 3 + (Math.random() * 3 | 0);
   const baseY = groundY - (arc ? 150 : 70) * SC - Math.random() * 60 * SC;
@@ -487,6 +662,37 @@ const CHUNKS = [
       addBranch(x + gap);
       return gap + 220 * SC;
   } },
+  // ---- 신규 장애물 청크 (stg: 등장 스테이지 제한) ----
+  { id: 'snake', d: 2, fn(x) { addSnake(x); if (Math.random() < 0.4) boneArc(x + 20 * SC, true); return 160 * SC; } },
+  { id: 'mud', d: 2, stg: [0, 1], fn(x) { addMud(x); boneArc(x + 10 * SC, true); return 190 * SC; } },
+  { id: 'bees', d: 3, fn(x) { addBees(x + 60 * SC); return 170 * SC; } },
+  { id: 'boulder', d: 3, stg: [1, 2], fn(x) { addBoulder(x + 170 * SC); return 220 * SC; } },
+  { id: 'monkey', d: 4, stg: [1], fn(x) { addMonkey(x + 80 * SC); return 230 * SC; } },
+  { id: 'wisp', d: 4, stg: [2], fn(x) { addWisp(x + 40 * SC); return 170 * SC; } },
+  { id: 'snake_branch', d: 4, fn(x) {
+      addSnake(x);
+      const gap = 300 * SC + G.speed * 0.38;
+      addBranch(x + gap);
+      return gap + 220 * SC;
+  } },
+  { id: 'mud_rock', d: 3, stg: [0, 1], fn(x) {
+      addMud(x);
+      const gap = 200 * SC + G.speed * 0.22;
+      addObstacle('rock', x + 150 * SC + gap);
+      return 150 * SC + gap + 140 * SC;
+  } },
+  { id: 'boulder_hole', d: 5, stg: [1, 2], fn(x) {
+      const w = 130 * SC + G.speed * 0.07;
+      G.holes.push({ x, w });
+      addBoulder(x + w + 320 * SC + G.speed * 0.28);
+      return w + 320 * SC + G.speed * 0.28 + 150 * SC;
+  } },
+  { id: 'bees_rock', d: 5, fn(x) {
+      addObstacle('rock', x);
+      const gap = 340 * SC + G.speed * 0.30;
+      addBees(x + gap);
+      return gap + 170 * SC;
+  } },
   // 튜토리얼 전용
   { id: 'branch_intro', d: 9, fn(x) {
       addBranch(x);
@@ -507,7 +713,8 @@ function spawnChunk() {
   } else {
     const maxD = bandFor(G.worldX);
     const pool = CHUNKS.filter(c =>
-      c.d <= maxD && c.id !== G.lastChunk && (c.tag !== 'pow' || G.powCd <= 0));
+      c.d <= maxD && c.id !== G.lastChunk && (c.tag !== 'pow' || G.powCd <= 0) &&
+      (!c.stg || c.stg.indexOf(G.stage) >= 0));
     let total = 0;
     const weights = pool.map(c => {
       let w = c.d === maxD ? 2.2 : c.d === maxD - 1 ? 1.6 : 1;
@@ -549,6 +756,28 @@ function obstacleBoxes(o) {
     const y = o.y0 + Math.sin(o.t * 3) * 10 * SC;
     return [{ x: o.x + o.dw * 0.18, y: y - o.dh * 0.30, w: o.dw * 0.64, h: o.dh * 0.60 }];
   }
+  if (o.kind === 'snake') {
+    const up = Math.floor(o.t * 1.6) % 2 === 1; // 머리 올린 프레임은 살짝 높음
+    const hh = o.dh * (up ? 0.62 : 0.45);
+    return [{ x: o.x + o.dw * 0.16, y: groundY - hh, w: o.dw * 0.68, h: hh }];
+  }
+  if (o.kind === 'boulder') {
+    return [{ x: o.x + o.dw * 0.14, y: groundY - o.dh * 0.74, w: o.dw * 0.72, h: o.dh * 0.72 }];
+  }
+  if (o.kind === 'bees') {
+    const y = o.y0 + Math.sin(o.t * 2.4) * 26 * SC;
+    return [{ x: o.x + o.dw * 0.12, y: y - o.dh * 0.34, w: o.dw * 0.76, h: o.dh * 0.68 }];
+  }
+  if (o.kind === 'mud') {
+    return []; // 진흙은 밟기 판정만 (충돌 데미지 없음)
+  }
+  if (o.kind === 'monkey') {
+    return [{ x: o.x + o.dw * 0.18, y: groundY - o.dh * 0.72, w: o.dw * 0.64, h: o.dh * 0.72 }];
+  }
+  if (o.kind === 'wisp') {
+    const y = o.y0 + Math.sin(o.t * 4.2) * 44 * SC;
+    return [{ x: o.x + o.dw * 0.15, y: y - o.dh * 0.35, w: o.dw * 0.7, h: o.dh * 0.7 }];
+  }
   const def = OBS_DEF[o.kind];
   return [{
     x: o.x + o.dw * def.hbx, y: groundY - o.dh * def.hby,
@@ -572,7 +801,7 @@ function hitObstacle() {
   G.combo = 0;
   G.hitCnt++;
   G.noHitDist = G.worldX;
-  G.tigerDist = Math.max(0, G.tigerDist - 26);
+  G.tigerDist = Math.max(0, G.tigerDist - (bikeId === 'tank' ? 13 : 26));
   G.slowRecover = 0.85;
   G.shake = 0.45; G.flash = 0.35;
   G.hitStop = 0.09;
@@ -638,7 +867,7 @@ function collectPow(w) {
     G.magT = 8;
     sfx.power(); pop(w.x, w.y - 30 * SC, '🧲 뼈다귀 자석!', '#ffb0f0', true);
   } else if (w.kind === 'boost') {
-    G.boostT = 2.3;
+    G.boostT = G.perks.boostLong ? 3.5 : 2.3;
     G.tigerDist = Math.min(100, G.tigerDist + 10);
     sfx.boost(); vib(50); pop(w.x, w.y - 30 * SC, '🚀 부스터!!', '#ffcf5e', true);
   } else if (w.kind === 'gold') {
@@ -646,7 +875,7 @@ function collectPow(w) {
     G.combo += 5;
     G.comboMax = Math.max(G.comboMax, G.combo);
     G.score += 120;
-    if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 5 / 16);
+    if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 5 / (G.perks.feverNeed || 16));
     sfx.gold(); pop(w.x, w.y - 30 * SC, '💛 황금 뼈다귀 +5!', '#ffd75e', true);
   }
   sparkle(w.x, w.y, 16, w.kind === 'gold' ? '255,214,90' : '160,230,255');
@@ -680,7 +909,7 @@ function update(dt) {
   // 속도 (피버/부스터 배속) — 최고속 도달 ~1200m로 완만하게
   const ramp = 4.2 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
-  let target = G.baseSpeed;
+  let target = G.baseSpeed * (bike().speedMult || 1);
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
   if (G.boostT > 0) target = G.baseSpeed * 1.8;
   if (G.slowRecover > 0) { G.slowRecover -= dt; G.speed = G.baseSpeed * 0.55; }
@@ -698,6 +927,24 @@ function update(dt) {
     showToast(stg === 1 ? '해가 저물어 간다…' : stg === 2 ? '반딧불이 반짝반짝!' : '아침 해가 떴다!');
   }
   if (G.stageFade < 1) G.stageFade = Math.min(1, G.stageFade + dt * 0.8);
+
+  // 카툰 이벤트 (안전한 타이밍에만: 지상 + 피버/부스터 아님)
+  if (G.worldX >= G.nextEventAt && p.onGround && !p.falling && G.feverT <= 0 && G.boostT <= 0) {
+    startEvent();
+    return;
+  }
+
+  // 소나기 이벤트
+  if (G.rainT > 0) G.rainT -= dt;
+  else if (G.worldX >= G.rainNext) {
+    G.rainNext = G.worldX + 700 + Math.random() * 600;
+    if (Math.random() < 0.65) {
+      G.rainT = 7;
+      G.flash = Math.max(G.flash, 0.18);
+      showToast('☔ 소나기다! 정글이 촉촉해진다~');
+      sfx.roar(); // 천둥 대용 저음
+    }
+  }
 
   // 최고 기록 돌파 연출 (달리는 중 실시간)
   if (!G.bestBroken && best > 0 && G.worldX > best) {
@@ -724,6 +971,12 @@ function update(dt) {
   if (G.worldX >= 3000) unlock('m3000');
   if (G.worldX - G.noHitDist >= 700) unlock('nohit700');
 
+  // 퍼크: 슬라이드 터보 / 호랑이 지구력
+  if (G.perks.slideTurbo && p.sliding && G.feverT <= 0) {
+    G.fever = Math.min(1, G.fever + dt * 0.045);
+    if (G.fever >= 1) startFever();
+  }
+
   // 피버/파워업 타이머
   if (G.feverT > 0) {
     G.feverT -= dt;
@@ -739,7 +992,7 @@ function update(dt) {
   }
 
   // 호랑이 게이지 회복
-  G.tigerDist = Math.min(100, G.tigerDist + 1.7 * dt);
+  G.tigerDist = Math.min(100, G.tigerDist + (G.perks.tigerRegen ? 2.6 : 1.7) * dt);
 
   // 호랑이 으르렁 경고
   if (G.tigerDist < 25) {
@@ -751,8 +1004,18 @@ function update(dt) {
     }
   }
 
+  // 로우라이더: 머리 위 장애물 접근 시 자동 숙이기
+  let autoDuck = false;
+  if (bikeId === 'low' && p.onGround && !p.falling) {
+    for (const o of G.obstacles) {
+      if (o.kind !== 'branch' && o.kind !== 'toucan' && o.kind !== 'bees' && o.kind !== 'wisp') continue;
+      const d = o.x - p.x;
+      if (d > -(o.dw + p.w) && d < p.w * 1.6) { autoDuck = true; break; }
+    }
+  }
+
   // 슬라이드 상태
-  const wantSlide = slideHeld() || p.slideLock > 0;
+  const wantSlide = slideHeld() || p.slideLock > 0 || autoDuck;
   if (p.slideLock > 0) p.slideLock -= dt;
   if (p.onGround && !p.falling) {
     const was = p.sliding;
@@ -772,7 +1035,7 @@ function update(dt) {
     p.vy += 2850 * SC * dt;
     p.y += p.vy * dt;
     if (!p.falling && p.vy > 0 && p.y >= groundY) {
-      if (overHole(p.x)) {
+      if (overHole(p.x) && bikeId !== 'wing') {
         p.falling = true;
       } else {
         p.y = groundY; p.vy = 0; p.onGround = true; p.jumps = 0;
@@ -784,7 +1047,13 @@ function update(dt) {
     }
     if (p.falling && p.y - p.h > H + 40) { G.deathBy = 'hole'; startCaught(); p.falling = false; G.caughtT = 0.7; }
   } else {
-    if (overHole(p.x)) { p.onGround = false; p.falling = true; p.sliding = false; p.vy = 120 * SC; sfx.hit(); }
+    if (overHole(p.x)) {
+      if (bikeId === 'wing') {
+        // 날개 핀핀: 구덩이 위 활공
+        p.gliding = true;
+        if (Math.random() < dt * 24) sparkle(p.x - p.w * 0.3, p.y + 4 * SC, 1, '190,230,255');
+      } else { p.onGround = false; p.falling = true; p.sliding = false; p.vy = 120 * SC; sfx.hit(); }
+    } else p.gliding = false;
   }
   if (p.invuln > 0) p.invuln -= dt;
   if (p.squash > 0) p.squash -= dt;
@@ -796,7 +1065,53 @@ function update(dt) {
   for (const o of G.obstacles) {
     o.x -= dx;
     if (o.kind === 'toucan') { o.x -= 105 * SC * dt; o.t += dt; }
+    else if (o.kind === 'boulder') { o.x -= 150 * SC * dt; o.rot -= dt * 7; }
+    else if (o.kind === 'snake' || o.kind === 'bees' || o.kind === 'wisp') o.t += dt;
+    else if (o.kind === 'monkey') {
+      o.t += dt;
+      // 플레이어 접근 시 코코넛 투척 (한 번)
+      if (!o.thrown && o.x - p.x < 760 * SC && o.x - p.x > 200 * SC) {
+        o.thrown = true;
+        G.shots.push({
+          x: o.x + o.dw * 0.35, y: groundY - o.dh * 0.9,
+          vx: -(G.speed * 0.35 + 260 * SC), vy: -430 * SC, r: 17 * SC,
+        });
+        pop(o.x + o.dw * 0.4, groundY - o.dh * 1.05, '이거나 받아라! 🥥', '#ffd9a8');
+      }
+    }
+    else if (o.kind === 'mud') {
+      if (o.mudCd > 0) o.mudCd -= dt;
+      // 진흙 밟기: 잠깐 감속 (데미지 없음)
+      if (p.onGround && !p.falling && o.mudCd <= 0 &&
+          p.x > o.x && p.x < o.x + o.dw) {
+        o.mudCd = 0.8;
+        G.slowRecover = Math.max(G.slowRecover, 0.5);
+        dust(p.x, groundY, 8);
+        pop(p.x, p.y - p.h * 1.05, '질퍽질퍽…! 🟤', '#d8b48a');
+        sfx.slide();
+      }
+    }
   }
+  // 투사체 (코코넛)
+  for (const s of G.shots) {
+    s.x += s.vx * dt - dx * 0.15;
+    s.vy += 2400 * SC * dt;
+    s.y += s.vy * dt;
+    s.rot = (s.rot || 0) - dt * 9;
+    if (s.y >= groundY - s.r * 0.4 && !s.dead) {
+      s.dead = true;
+      dust(s.x, groundY, 6);
+      sfx.hit();
+    }
+    // 플레이어 명중
+    if (!s.dead && p.invuln <= 0) {
+      const pb0 = playerBox();
+      const cx = Math.max(pb0.x, Math.min(s.x, pb0.x + pb0.w));
+      const cy = Math.max(pb0.y, Math.min(s.y, pb0.y + pb0.h));
+      if ((s.x - cx) ** 2 + (s.y - cy) ** 2 < s.r * s.r) { s.dead = true; hitObstacle(); }
+    }
+  }
+  G.shots = G.shots.filter(s => !s.dead && s.x > -60 && s.y < H + 80);
   for (const h of G.holes) h.x -= dx;
   for (const b of G.bones) { b.x -= dx; b.t += dt * 4; }
   for (const w of G.pows) { w.x -= dx; w.t += dt * 3; }
@@ -809,16 +1124,16 @@ function update(dt) {
     }
   }
   for (const t of G.hints) t.x -= dx;
-  G.obstacles = G.obstacles.filter(o => o.x + o.dw > -80);
+  G.obstacles = G.obstacles.filter(o => o.x + o.dw > -80 && !o.dead);
   G.holes = G.holes.filter(h => h.x + h.w > -60);
   G.bones = G.bones.filter(b => b.x > -60 && !b.got);
   G.pows = G.pows.filter(w => w.x > -60 && !w.got);
   G.signs = G.signs.filter(s => s.x > -160 * SC);
   G.hints = G.hints.filter(t => t.x > -300 * SC);
 
-  // 자석/피버: 뼈 끌어오기
-  if (G.magT > 0 || G.feverT > 0) {
-    const R = G.feverT > 0 ? 280 * SC : 200 * SC;
+  // 자석/피버/자석 코팅 퍼크: 뼈 끌어오기
+  if (G.magT > 0 || G.feverT > 0 || G.perks.miniMag) {
+    const R = G.feverT > 0 ? 280 * SC : G.magT > 0 ? 200 * SC : 120 * SC;
     for (const b of G.bones) {
       const ddx = p.x - b.x, ddy = (p.y - p.h * 0.5) - b.y;
       const d2 = ddx * ddx + ddy * ddy;
@@ -837,11 +1152,22 @@ function update(dt) {
   const pb = playerBox();
   for (const o of G.obstacles) {
     const boxes = obstacleBoxes(o);
+    if (!boxes.length) continue; // 진흙 등 밟기 전용
     let hitNow = false;
     for (const ob of boxes) {
       if (rectsHit(pb, ob)) { hitNow = true; break; }
     }
     if (hitNow) {
+      // 탱크 핀핀: 날아다니는 적을 튕겨냄
+      if (bikeId === 'tank' && (o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp')) {
+        if (!o.hitDone) {
+          o.hitDone = true; o.dead = true;
+          sparkle(o.x + o.dw * 0.5, (o.y0 || groundY - 100 * SC), 14, '200,255,180');
+          pop(p.x, p.y - p.h * 1.15, '튕겨냈다! 🛡️', '#b8ffb0');
+          sfx.shield();
+        }
+        continue;
+      }
       if (!o.hitDone) { o.hitDone = true; hitObstacle(); }
     } else if (!o.hitDone && !o.nearDone) {
       // x축 겹칠 때 세로 간격 추적
@@ -852,10 +1178,11 @@ function update(dt) {
       } else if (mb.x + mb.w < pb.x && o.minClear < 26 * SC) {
         o.nearDone = true;
         G.nearCnt++;
-        G.score += 30;
-        if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 0.03);
+        const nb = G.perks.near2 ? 60 : 30;
+        G.score += nb;
+        if (G.feverT <= 0) G.fever = Math.min(1, G.fever + (G.perks.near2 ? 0.06 : 0.03));
         sfx.near();
-        pop(p.x, p.y - p.h * 1.15, '아슬아슬! +30', '#9fe8ff');
+        pop(p.x, p.y - p.h * 1.15, `아슬아슬! +${nb}`, '#9fe8ff');
         if (G.nearCnt >= 10) unlock('near10');
       }
     }
@@ -870,7 +1197,7 @@ function update(dt) {
       totals.bones++;
       G.combo++;
       G.comboMax = Math.max(G.comboMax, G.combo);
-      const bonus = 15 + Math.min(40, G.combo * 2) + (G.feverT > 0 ? 15 : 0);
+      const bonus = Math.round((15 + Math.min(40, G.combo * 2) + (G.feverT > 0 ? 15 : 0)) * (G.perks.boneMult || 1));
       G.score += bonus;
       sfx.collect();
       ring(b.x, b.y, '255,240,180', 130);
@@ -880,7 +1207,7 @@ function update(dt) {
         pop(p.x, p.y - p.h * 1.2, `콤보 x${G.combo}!! 🔥`, '#ffb84d', true);
       }
       if (G.feverT <= 0) {
-        G.fever = Math.min(1, G.fever + 1 / 16);
+        G.fever = Math.min(1, G.fever + 1 / (G.perks.feverNeed || 16));
         if (G.fever >= 1) startFever();
       }
       if (G.bonesCnt === 30) unlock('bones30');
@@ -913,13 +1240,35 @@ function update(dt) {
   for (const pp of G.pops) { pp.t += dt; pp.y -= 46 * SC * dt; }
   G.pops = G.pops.filter(pp => pp.t < pp.life);
 
-  // 밤 스테이지 반딧불
+  // 스테이지 앰비언트: 밤 반딧불 / 아침 낙엽 / 노을 꽃가루
   if (G.stage === 2 && Math.random() < dt * 6) {
     G.parts.push({
       x: W + 20, y: groundY - (60 + Math.random() * 380) * SC,
       vx: -(G.speed * 0.4 + Math.random() * 40 * SC), vy: (Math.random() - 0.5) * 30 * SC,
       r: (2 + Math.random() * 2.5) * SC, life: 3.5, t: 0, c: '190,255,120', grav: 0, glow: 1,
     });
+  } else if (G.stage === 0 && Math.random() < dt * 4) {
+    G.parts.push({
+      x: W * (0.3 + Math.random() * 0.8), y: -20,
+      vx: -(G.speed * 0.3 + 30 * SC), vy: (60 + Math.random() * 50) * SC,
+      r: (3 + Math.random() * 3) * SC, life: 4, t: 0, c: '110,190,80', grav: 0, leaf: 1,
+    });
+  } else if (G.stage === 1 && Math.random() < dt * 5) {
+    G.parts.push({
+      x: W + 20, y: groundY - (40 + Math.random() * 420) * SC,
+      vx: -(G.speed * 0.35 + Math.random() * 30 * SC), vy: (Math.random() - 0.3) * 26 * SC,
+      r: (1.6 + Math.random() * 2) * SC, life: 3.2, t: 0, c: '255,214,140', grav: 0, glow: 1,
+    });
+  }
+  // 소나기 빗방울
+  if (G.rainT > 0) {
+    for (let i = 0; i < 3; i++) {
+      G.parts.push({
+        x: Math.random() * (W + 100), y: -10,
+        vx: -(G.speed * 0.5 + 120 * SC), vy: (900 + Math.random() * 300) * SC,
+        r: 1, life: 0.9, t: 0, c: '170,205,240', grav: 0, rain: 1,
+      });
+    }
   }
 
   if (G.shake > 0) G.shake -= dt;
@@ -992,6 +1341,12 @@ function draw() {
   // 스테이지 틴트
   const tint = STAGE_TINT[G.stage];
   if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
+  // 소나기 톤
+  if (G.rainT > 0) {
+    const ra = Math.min(0.14, G.rainT > 6.4 ? (7 - G.rainT) * 0.25 : G.rainT < 1 ? G.rainT * 0.14 : 0.14);
+    ctx.fillStyle = `rgba(60,80,110,${ra})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   // 피버 골드 글로우
   if (G.feverT > 0) {
     const a = 0.10 + Math.sin(performance.now() * 0.012) * 0.04;
@@ -1046,6 +1401,21 @@ function drawBG() {
     drawOne(stageBg(G.stagePrev), 1);
     drawOne(cur, G.stageFade);
   } else drawOne(cur, 1);
+  // 중경 실루엣 패럴랙스 (덤불/수풀 층 — 깊이감)
+  const mw = 250 * SC;
+  const mCol = G.stage === 2 ? 'rgba(6,12,24,0.55)' : G.stage === 1 ? 'rgba(30,14,8,0.45)' : 'rgba(7,22,12,0.5)';
+  ctx.fillStyle = mCol;
+  tileLoop(mw, G.worldX * 42 * SC * 0.55, (bx, m) => {
+    const seed = ((Math.round(bx + G.worldX * 42 * SC * 0.55) / mw) | 0);
+    const h1 = 46 + ((seed * 2654435761 >>> 8) % 70);
+    const h2 = 30 + ((seed * 40503 >>> 4) % 52);
+    ctx.beginPath();
+    ctx.ellipse(bx + mw * 0.3, groundY - 2 * SC, mw * 0.34, h1 * SC, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(bx + mw * 0.74, groundY - 2 * SC, mw * 0.26, h2 * SC, 0, Math.PI, 0);
+    ctx.fill();
+  });
   const gr = ctx.createLinearGradient(0, groundY - 160 * SC, 0, groundY);
   gr.addColorStop(0, 'rgba(8,20,10,0)');
   gr.addColorStop(1, 'rgba(8,20,10,0.45)');
@@ -1134,10 +1504,108 @@ function drawObstacles() {
         ctx.textAlign = 'center';
         ctx.fillText('❗', W - 26 * SC, o.y0 - 10 * SC);
       }
+    } else if (o.kind === 'snake') {
+      const up = Math.floor(o.t * 1.6) % 2 === 1;
+      const im = up ? (img.snake2 || img.snake1) : img.snake1;
+      if (im && im.width) ctx.drawImage(im, o.x, groundY - o.dh + 4 * SC, o.dw, o.dh);
+      else { ctx.fillStyle = '#3f8f3a'; ctx.fillRect(o.x, groundY - 34 * SC, o.dw, 34 * SC); }
+    } else if (o.kind === 'boulder') {
+      const im = img.rock;
+      ctx.save();
+      ctx.translate(o.x + o.dw / 2, groundY - o.dh / 2 + 4 * SC);
+      ctx.rotate(o.rot);
+      if (im && im.width) ctx.drawImage(im, -o.dw / 2, -o.dh / 2, o.dw, o.dh);
+      ctx.restore();
+      // 구름 먼지
+      if (Math.random() < 0.3) dust(o.x + o.dw, groundY, 1);
+    } else if (o.kind === 'bees') {
+      const y = o.y0 + Math.sin(o.t * 2.4) * 26 * SC;
+      // 벌떼: 윙윙거리는 점 군집
+      for (let i = 0; i < 9; i++) {
+        const a = o.t * 6 + i * 2.4;
+        const bx = o.x + o.dw * 0.5 + Math.cos(a + i) * o.dw * 0.34;
+        const by = y + Math.sin(a * 1.3 + i * 1.7) * o.dh * 0.4;
+        ctx.fillStyle = i % 3 === 0 ? '#2b2416' : '#ffd23e';
+        ctx.beginPath();
+        ctx.arc(bx, by, (3.2 + (i % 3)) * SC, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.5)';
+        ctx.beginPath();
+        ctx.arc(bx + 2 * SC, by - 3 * SC, 2.2 * SC, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // 경고
+      if (o.x > W - 60 * SC) {
+        ctx.fillStyle = 'rgba(255,210,60,0.95)';
+        ctx.font = `900 ${22 * SC}px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('🐝❗', W - 40 * SC, o.y0 - 30 * SC);
+      }
+    } else if (o.kind === 'mud') {
+      // 진흙 웅덩이
+      ctx.fillStyle = '#4a3320';
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.dw / 2, groundY + 2 * SC, o.dw / 2, 10 * SC, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(120,86,52,0.85)';
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.dw / 2, groundY, o.dw / 2 - 6 * SC, 7 * SC, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.dw * 0.38, groundY - 2 * SC, o.dw * 0.16, 2.5 * SC, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (o.kind === 'monkey') {
+      const im = img.monkey;
+      const wob = Math.sin(o.t * 3) * 2 * SC;
+      if (im && im.width) ctx.drawImage(im, o.x, groundY - o.dh + 4 * SC + wob, o.dw, o.dh);
+      else { ctx.fillStyle = '#7a5230'; ctx.fillRect(o.x, groundY - 90 * SC, o.dw * 0.6, 90 * SC); }
+    } else if (o.kind === 'wisp') {
+      const y = o.y0 + Math.sin(o.t * 4.2) * 44 * SC;
+      const r = o.dw * 0.42;
+      ctx.save();
+      ctx.shadowColor = 'rgba(120,255,220,0.9)';
+      ctx.shadowBlur = 22 * SC;
+      const wg = ctx.createRadialGradient(o.x + o.dw / 2, y, 2, o.x + o.dw / 2, y, r);
+      wg.addColorStop(0, 'rgba(230,255,250,0.95)');
+      wg.addColorStop(0.5, 'rgba(110,240,205,0.75)');
+      wg.addColorStop(1, 'rgba(60,200,170,0)');
+      ctx.fillStyle = wg;
+      ctx.beginPath();
+      ctx.arc(o.x + o.dw / 2, y, r, 0, Math.PI * 2);
+      ctx.fill();
+      // 꼬리
+      ctx.globalAlpha = 0.4;
+      ctx.beginPath();
+      ctx.arc(o.x + o.dw / 2 + 18 * SC, y - Math.cos(o.t * 4.2) * 18 * SC, r * 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      ctx.globalAlpha = 1;
     } else {
       const im = img[o.kind];
       if (im && im.width) ctx.drawImage(im, o.x, groundY - o.dh + 4 * SC, o.dw, o.dh);
     }
+  }
+  // 코코넛 투사체
+  for (const s of G.shots) {
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.rotate(s.rot || 0);
+    ctx.fillStyle = '#6b4a28';
+    ctx.beginPath();
+    ctx.arc(0, 0, s.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.arc(-s.r * 0.3, -s.r * 0.3, s.r * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#40301a';
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(Math.cos(i * 2.1) * s.r * 0.35, Math.sin(i * 2.1) * s.r * 0.35, s.r * 0.11, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
   }
 }
 
@@ -1222,7 +1690,36 @@ function drawPlayer() {
     ctx.drawImage(im, -dw * 0.52, -dh * 0.94, dw, dh);
     ctx.restore();
   }
+  // 날개 핀핀: 펄럭이는 날개 (스프라이트 뒤)
+  if (bikeId === 'wing') {
+    const flap = (!p.onGround || p.gliding) ? Math.sin(performance.now() * 0.02) * 0.5 : Math.sin(performance.now() * 0.008) * 0.15;
+    ctx.save();
+    ctx.translate(-dw * 0.34, -dh * 0.52);
+    ctx.rotate(-0.5 + flap);
+    ctx.fillStyle = 'rgba(235,246,255,0.92)';
+    ctx.strokeStyle = 'rgba(140,180,220,0.9)';
+    ctx.lineWidth = 2 * SC;
+    ctx.beginPath();
+    ctx.ellipse(0, -dh * 0.18, dw * 0.30, dh * 0.13, -0.25, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.ellipse(-dw * 0.06, -dh * 0.10, dw * 0.22, dh * 0.10, -0.4, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
   ctx.drawImage(im, -dw * 0.52, -dh * 0.94, dw, dh);
+  // 로켓 핀핀: 3단 점프 화염
+  if (bikeId === 'rocket' && !p.onGround && p.jumps >= 3) {
+    const fl = 0.7 + Math.random() * 0.5;
+    const fg = ctx.createRadialGradient(-dw * 0.1, dh * 0.02, 2, -dw * 0.1, dh * 0.02, 26 * SC * fl);
+    fg.addColorStop(0, 'rgba(255,240,170,0.95)');
+    fg.addColorStop(0.5, 'rgba(255,150,50,0.8)');
+    fg.addColorStop(1, 'rgba(255,80,20,0)');
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.arc(-dw * 0.1, dh * 0.02, 26 * SC * fl, 0, Math.PI * 2);
+    ctx.fill();
+  }
   // 헬멧 표시
   if (G.shield) {
     ctx.font = `${30 * SC}px sans-serif`;
@@ -1234,10 +1731,10 @@ function drawPlayer() {
 }
 function pickShiba() {
   const p = G.player;
-  if (p.sliding && img.shibaSlide && img.shibaSlide.width) return img.shibaSlide;
-  if (state === ST.CAUGHT || state === ST.REVIVE) return img.shiba2;
-  if (!p.onGround) return p.jumps >= 2 ? img.shiba2 : img.shiba1;
-  return img[SHIBA_RUN[Math.floor(p.anim) % SHIBA_RUN.length]];
+  if (p.sliding && img.shibaSlide && img.shibaSlide.width) return bikeImg('shibaSlide');
+  if (state === ST.CAUGHT || state === ST.REVIVE) return bikeImg('shiba2');
+  if (!p.onGround) return p.jumps >= 2 ? bikeImg('shiba2') : bikeImg('shiba1');
+  return bikeImg(SHIBA_RUN[Math.floor(p.anim) % SHIBA_RUN.length]);
 }
 
 const TIGER_RUN = ['tiger1', 'tiger3', 'tiger2', 'tiger4'];
@@ -1279,6 +1776,23 @@ function drawParts() {
       ctx.beginPath();
       ctx.arc(pa.x, pa.y, pa.r + pa.growth * pa.t, 0, Math.PI * 2);
       ctx.stroke();
+    } else if (pa.rain) {
+      ctx.strokeStyle = `rgba(${pa.c},${a * 0.5})`;
+      ctx.lineWidth = 1.4 * SC;
+      ctx.beginPath();
+      ctx.moveTo(pa.x, pa.y);
+      ctx.lineTo(pa.x - pa.vx * 0.016, pa.y - pa.vy * 0.016);
+      ctx.stroke();
+      if (pa.y > groundY) pa.t = pa.life; // 지면 도달 시 제거
+    } else if (pa.leaf) {
+      ctx.save();
+      ctx.translate(pa.x, pa.y);
+      ctx.rotate(pa.t * 3 + pa.x * 0.01);
+      ctx.fillStyle = `rgba(${pa.c},${a * 0.8})`;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, pa.r * 1.6, pa.r * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     } else if (pa.glow) {
       ctx.save();
       ctx.shadowColor = `rgba(${pa.c},0.9)`;
@@ -1575,8 +2089,39 @@ ui.reviveSkip.addEventListener('click', () => {
 function refreshTitle() {
   ui.titleMeta.innerHTML =
     (best > 0 ? `🏆 최고 기록 <b>${best}m</b> &nbsp;·&nbsp; ` : '') +
-    `🏅 도전과제 <b>${achCount()}/${ACH.length}</b>`;
+    `🏅 도전과제 <b>${achCount()}/${ACH.length}</b> &nbsp;·&nbsp; ${bike().icon} <b>${bike().name}</b>`;
 }
+
+// ---------- 바이크 차고 ----------
+const BIKE_COLOR = { pink: '#f5a8c0', rocket: '#ff8a3d', low: '#b06ff0', wing: '#6fc8f0', tank: '#7fc45e' };
+function openGarage() {
+  sfx.click();
+  ui.bikeList.innerHTML = Object.keys(BIKES).map(id => {
+    const b = BIKES[id];
+    const on = bikeUnlocked(id);
+    const sel = id === bikeId;
+    const lockTxt = b.unlock ? (ACH.find(a => a.id === b.unlock) || {}).name : '';
+    return `<button class="bike-card ${sel ? 'sel' : ''} ${on ? '' : 'locked'}" data-id="${id}" ${on ? '' : 'disabled'}>
+      <span class="bike-chip" style="background:${BIKE_COLOR[id]}"></span>
+      <span class="bike-icon">${on ? b.icon : '🔒'}</span>
+      <span class="bike-txt"><b>${b.name}</b><small>${on ? b.desc : `잠김 — 도전과제 [${lockTxt}] 달성 시 해금`}</small></span>
+      ${sel ? '<span class="bike-sel">✓ 탑승중</span>' : ''}
+    </button>`;
+  }).join('');
+  ui.bikeList.querySelectorAll('.bike-card:not(.locked)').forEach(btn => {
+    btn.onclick = () => {
+      bikeId = btn.dataset.id;
+      store.set('finfin_bike', bikeId);
+      buildTint(bikeId);
+      sfx.power();
+      refreshTitle();
+      openGarage(); // 갱신
+    };
+  });
+  ui.garage.classList.remove('hidden');
+}
+ui.garageBtn.addEventListener('click', openGarage);
+ui.garageClose.addEventListener('click', () => { sfx.click(); ui.garage.classList.add('hidden'); });
 
 // ---------- 버튼 ----------
 ui.startBtn.addEventListener('click', () => { audioInit(); sfx.click(); playIntro(); });
@@ -1586,7 +2131,7 @@ ui.introBtn.addEventListener('click', () => { audioInit(); sfx.click(); playIntr
 // ---------- 테스트 모드 (?test) ----------
 if (location.search.indexOf('test') >= 0) {
   window.__test = {
-    go() { if (state !== ST.RUN) { resetGame(); showScreen(null); ui.hud.classList.remove('hidden'); state = ST.RUN; } },
+    go() { resetGame(); showScreen(null); [ui.event, ui.revive, ui.pause].forEach(e => e.classList.add('hidden')); ui.hud.classList.remove('hidden'); state = ST.RUN; },
     sim(ms) { const n = Math.round(ms / 16); for (let i = 0; i < n; i++) update(0.016); draw(); },
     warp(m) { G.worldX = m; G.nextMilestone = Math.ceil(m / 500) * 500 + 500; },
     caught: startCaught,
@@ -1600,6 +2145,10 @@ if (location.search.indexOf('test') >= 0) {
     chunk(id) { CHUNK_MAP[id].fn(W + 80 * SC); },
     revive: doRevive,
     resetSave() { localStorage.clear(); },
+    bike(id) { bikeId = id; buildTint(id); },
+    event: startEvent,
+    endEvent,
+    rain() { G.rainT = 7; },
     // 난이도 계측용 자동 플레이 봇 (reactSec: 반응 속도 — 사람 평균 ~0.42s)
     botRun(reactSec = 0.42, maxMs = 240000) {
       this.go();
@@ -1607,20 +2156,28 @@ if (location.search.indexOf('test') >= 0) {
       const n = Math.round(maxMs / 16);
       for (let i = 0; i < n; i++) {
         if (state === ST.REVIVE) { ui.revive.classList.add('hidden'); endGame(); }
+        if (state === ST.EVENT) { // 이벤트: 첫 퍼크 카드 자동 선택
+          const c = ui.event.querySelector('.perk-card');
+          if (c) c.click(); else endEvent();
+        }
         if (state !== ST.RUN && state !== ST.CAUGHT) break;
         if (state === ST.RUN) {
           const react = G.speed * reactSec + 40 * SC;
           let jumpD = 1e9, slideD = 1e9;
           for (const o of G.obstacles) {
-            if (o.hitDone) continue;
+            if (o.hitDone || o.kind === 'mud') continue;
             const d = o.x - (p.x + p.w * 0.3);
             if (d < -60 * SC) continue;
-            if (o.kind === 'branch' || o.kind === 'toucan') slideD = Math.min(slideD, d);
+            if (o.kind === 'branch' || o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp') slideD = Math.min(slideD, d);
             else jumpD = Math.min(jumpD, d);
           }
           for (const h of G.holes) {
             const d = h.x - p.x;
             if (d > -h.w) jumpD = Math.min(jumpD, Math.max(0, d));
+          }
+          for (const s of G.shots) {
+            const d = s.x - p.x;
+            if (d > 0 && d < G.speed * 0.35) jumpD = Math.min(jumpD, d);
           }
           const wantSlide = slideD < react * 0.85 && slideD > -80 * SC;
           if (wantSlide && !input.keySlide) { input.keySlide = true; slidePress(); }
