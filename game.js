@@ -303,7 +303,7 @@ function resetGame() {
   G.powCd = 2;
   G.queue = totals.runs === 0 ? ['bones_line', 'rock', 'bones_arc', 'log', 'branch_intro', 'bones_line'] : [];
   // 기록
-  G.nearCnt = 0; G.slideCnt = 0; G.noHitDist = 0; G.newAch = []; G.hitCnt = 0;
+  G.nearCnt = 0; G.slideCnt = 0; G.noHitDist = 0; G.newAch = []; G.hitCnt = 0; G.hitByKind = {};
   G.reviveUsed = false; G.reviveT = 0;
   // 스테이지
   G.stage = 0; G.stagePrev = 0; G.stageFade = 1;
@@ -398,7 +398,8 @@ function endEvent() {
   state = ST.RUN;
   const p = G.player;
   p.invuln = Math.max(p.invuln, 1.2);
-  G.spawnPx = Math.max(G.spawnPx, 550 * SC);   // 복귀 여유
+  G.tigerDist = Math.min(100, G.tigerDist + 8);  // 숨 고르기: 호랑이도 잠깐 쉼
+  G.spawnPx = Math.max(G.spawnPx, 550 * SC);     // 복귀 여유
   G.nextEventAt = G.worldX + 850 + Math.random() * 250;
 }
 
@@ -730,7 +731,7 @@ function spawnChunk() {
   const w = chunk.fn(x);
   G.lastChunk = chunk.id;
   if (chunk.tag === 'pow') G.powCd = 5 + (Math.random() * 4 | 0); else G.powCd--;
-  const gap = G.speed * (0.52 + Math.random() * 0.42) + 170 * SC;
+  const gap = G.speed * (0.48 + Math.random() * 0.40) + 165 * SC;
   G.spawnPx = w + gap;
 }
 
@@ -747,8 +748,9 @@ function obstacleBoxes(o) {
   if (o.kind === 'branch') {
     const barH = o.dh * 0.30;
     const barTop = o.barBottom - barH;
+    // 바 뒤쪽(잎사귀)은 관대하게 — 슬라이드를 조금 일찍 풀어도 안 걸리게
     return [
-      { x: o.x + o.dw * 0.05, y: barTop, w: o.dw * 0.90, h: barH },
+      { x: o.x + o.dw * 0.10, y: barTop, w: o.dw * 0.66, h: barH },
       { x: o.x + o.dw * 0.36, y: 0, w: o.dw * 0.28, h: Math.max(0, barTop) },
     ];
   }
@@ -786,7 +788,7 @@ function obstacleBoxes(o) {
 }
 
 // ---------- 피격/포획/부활 ----------
-function hitObstacle() {
+function hitObstacle(kind) {
   const p = G.player;
   if (p.invuln > 0 || G.feverT > 0 || G.boostT > 0) return;
   if (G.shield) {
@@ -800,6 +802,7 @@ function hitObstacle() {
   p.invuln = 1.5;
   G.combo = 0;
   G.hitCnt++;
+  G.hitByKind[kind || '?'] = (G.hitByKind[kind || '?'] || 0) + 1;
   G.noHitDist = G.worldX;
   G.tigerDist = Math.max(0, G.tigerDist - (bikeId === 'tank' ? 13 : 26));
   G.slowRecover = 0.85;
@@ -906,8 +909,8 @@ function update(dt) {
   }
   if (state !== ST.RUN) return;
 
-  // 속도 (피버/부스터 배속) — 최고속 도달 ~1200m로 완만하게
-  const ramp = 4.2 * SC;
+  // 속도 (피버/부스터 배속) — 최고속 도달 ~1000m
+  const ramp = 4.6 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
   let target = G.baseSpeed * (bike().speedMult || 1);
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
@@ -992,7 +995,7 @@ function update(dt) {
   }
 
   // 호랑이 게이지 회복
-  G.tigerDist = Math.min(100, G.tigerDist + (G.perks.tigerRegen ? 2.6 : 1.7) * dt);
+  G.tigerDist = Math.min(100, G.tigerDist + (G.perks.tigerRegen ? 2.3 : 1.5) * dt);
 
   // 호랑이 으르렁 경고
   if (G.tigerDist < 25) {
@@ -1108,7 +1111,7 @@ function update(dt) {
       const pb0 = playerBox();
       const cx = Math.max(pb0.x, Math.min(s.x, pb0.x + pb0.w));
       const cy = Math.max(pb0.y, Math.min(s.y, pb0.y + pb0.h));
-      if ((s.x - cx) ** 2 + (s.y - cy) ** 2 < s.r * s.r) { s.dead = true; hitObstacle(); }
+      if ((s.x - cx) ** 2 + (s.y - cy) ** 2 < s.r * s.r) { s.dead = true; hitObstacle('coconut'); }
     }
   }
   G.shots = G.shots.filter(s => !s.dead && s.x > -60 && s.y < H + 80);
@@ -1168,7 +1171,7 @@ function update(dt) {
         }
         continue;
       }
-      if (!o.hitDone) { o.hitDone = true; hitObstacle(); }
+      if (!o.hitDone) { o.hitDone = true; hitObstacle(o.kind); }
     } else if (!o.hitDone && !o.nearDone) {
       // x축 겹칠 때 세로 간격 추적
       const mb = boxes[0];
@@ -1214,7 +1217,7 @@ function update(dt) {
       if (totals.bones >= 300) unlock('bones300');
       if (G.combo >= 15) unlock('combo15');
       if (G.bonesCnt % 8 === 0) {
-        G.tigerDist = Math.min(100, G.tigerDist + 14);
+        G.tigerDist = Math.min(100, G.tigerDist + 12);
         sfx.power();
         showToast('간식 파워!! 🦴 호랑이를 따돌렸다!');
       }
@@ -1507,8 +1510,10 @@ function drawObstacles() {
     } else if (o.kind === 'snake') {
       const up = Math.floor(o.t * 1.6) % 2 === 1;
       const im = up ? (img.snake2 || img.snake1) : img.snake1;
-      if (im && im.width) ctx.drawImage(im, o.x, groundY - o.dh + 4 * SC, o.dw, o.dh);
-      else { ctx.fillStyle = '#3f8f3a'; ctx.fillRect(o.x, groundY - 34 * SC, o.dw, 34 * SC); }
+      if (im && im.width) {
+        const fh = o.dw * (im.height / im.width); // 프레임별 고유 비율 (바닥 기준 정렬)
+        ctx.drawImage(im, o.x, groundY - fh + 4 * SC, o.dw, fh);
+      } else { ctx.fillStyle = '#3f8f3a'; ctx.fillRect(o.x, groundY - 34 * SC, o.dw, 34 * SC); }
     } else if (o.kind === 'boulder') {
       const im = img.rock;
       ctx.save();
@@ -2163,13 +2168,14 @@ if (location.search.indexOf('test') >= 0) {
         if (state !== ST.RUN && state !== ST.CAUGHT) break;
         if (state === ST.RUN) {
           const react = G.speed * reactSec + 40 * SC;
-          let jumpD = 1e9, slideD = 1e9;
+          let jumpD = 1e9, slideD = 1e9, slideO = null;
           for (const o of G.obstacles) {
             if (o.hitDone || o.kind === 'mud') continue;
             const d = o.x - (p.x + p.w * 0.3);
-            if (d < -60 * SC) continue;
-            if (o.kind === 'branch' || o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp') slideD = Math.min(slideD, d);
-            else jumpD = Math.min(jumpD, d);
+            if (o.kind === 'branch' || o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp') {
+              // 사람처럼 장애물이 완전히 지나갈 때까지 숙이기 유지
+              if (d > -(o.dw + 60 * SC) && d < slideD) { slideD = d; slideO = o; }
+            } else if (d >= -60 * SC) jumpD = Math.min(jumpD, d);
           }
           for (const h of G.holes) {
             const d = h.x - p.x;
@@ -2179,7 +2185,7 @@ if (location.search.indexOf('test') >= 0) {
             const d = s.x - p.x;
             if (d > 0 && d < G.speed * 0.35) jumpD = Math.min(jumpD, d);
           }
-          const wantSlide = slideD < react * 0.85 && slideD > -80 * SC;
+          const wantSlide = slideO !== null && slideD < react * 0.85;
           if (wantSlide && !input.keySlide) { input.keySlide = true; slidePress(); }
           else if (!wantSlide) input.keySlide = false;
           if (!wantSlide && jumpD < G.speed * 0.22 + 24 * SC && p.onGround) jumpInput();
@@ -2188,9 +2194,14 @@ if (location.search.indexOf('test') >= 0) {
               ((jumpD < 1e8 && jumpD > -70 * SC) || overHole(p.x + p.w * 0.8))) jumpInput();
         }
         update(0.016);
+        if (G.worldX < 300) G.earlyHits = G.hitCnt;
       }
       input.keySlide = false;
-      const res = { m: Math.floor(G.worldX), deathBy: G.deathBy || 'none', hits: G.hitCnt, bones: G.bonesCnt, fevers: G.feverCnt, state };
+      const res = {
+        m: Math.floor(G.worldX), deathBy: G.deathBy || 'none', hits: G.hitCnt,
+        bones: G.bonesCnt, fevers: G.feverCnt, byKind: Object.assign({}, G.hitByKind),
+        early: G.earlyHits || 0, state,
+      };
       if (state === ST.OVER) return res;
       endGame();
       return res;
