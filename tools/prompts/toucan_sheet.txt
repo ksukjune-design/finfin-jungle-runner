@@ -1,0 +1,12 @@
+Create a 1x2 sprite sheet: two equal side-by-side cells on a pure flat solid chroma-key green background (#00FF00). No gradients, no shadows.
+
+Character (identical bird in both cells): a cute cartoon TOUCAN with a black body, white chest, big oversized orange-yellow beak, small angry-playful eyes — swooping/flying toward the LEFT (beak pointing left), body tilted slightly downward as if dive-bombing.
+
+- Left cell: wings raised HIGH above the body (upstroke).
+- Right cell: wings swept DOWN below the body (downstroke).
+
+Same size and same position within each cell, fully inside its cell with margin, never touching cell borders or each other.
+
+Style: cute stylized 3D-rendered cartoon game character (mobile game quality), clean crisp silhouette edges, vibrant colors, side view facing LEFT.
+
+Absolutely no text, no watermark, no background scenery, no grid lines.

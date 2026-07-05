@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d2416">
 <title>핀핀 정글 등원 대작전</title>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
   <div id="app">
@@ -19,6 +19,7 @@
     <div id="hud" class="hidden">
       <div class="hud-row">
         <div id="score" class="pill">0m</div>
+        <div id="combo" class="pill combo-pill hidden"></div>
         <div id="bones" class="pill">🦴 0</div>
       </div>
       <div id="tigerbar-wrap">
@@ -26,7 +27,19 @@
         <div id="tigerbar"><div id="tigerbar-fill"></div></div>
         <span class="dog-icon">🐕</span>
       </div>
+      <div id="feverbar-wrap">
+        <span class="fever-icon">🔥</span>
+        <div id="feverbar"><div id="feverbar-fill"></div></div>
+      </div>
+      <div id="effects" class="pill hidden"></div>
       <div id="toast" class="hidden"></div>
+      <button id="pauseBtn" aria-label="일시정지">⏸</button>
+    </div>
+
+    <!-- 조작 안내 오버레이 -->
+    <div id="zones" class="hidden">
+      <div class="zone zone-l"><span>⬇<br>왼쪽 꾹~<br><b>슬라이드</b></span></div>
+      <div class="zone zone-r"><span>⬆<br>오른쪽 탭!<br><b>점프</b></span></div>
     </div>
 
     <!-- 인트로 동영상 -->
@@ -39,33 +52,76 @@
     <div id="start" class="screen">
       <video id="posterVideo" src="assets/video/intro.mp4" playsinline webkit-playsinline preload="auto" muted></video>
       <div class="start-shade"></div>
+      <button id="muteBtn" class="icon-btn" aria-label="소리">🔊</button>
       <div class="start-content">
         <p class="badge">FINFIN 밸런스바이크 PRO V2</p>
         <h1>정글 등원<br>대작전</h1>
         <p class="subtitle">등원은 재밌쟁! 🐕 페달 없이 씽씽~<br>호랑이 🐯 보다 빨리 유치원까지 달려라!</p>
+        <p id="titleMeta"></p>
         <button id="startBtn">등원 시작!</button>
-        <p class="hint">화면을 탭하면 점프 · 공중에서 한 번 더 탭하면 2단 점프<br>세로·가로 화면 모두 지원 📱</p>
+        <button id="achBtn" class="ghost">🏅 도전과제</button>
+        <p class="hint">오른쪽 탭 = 점프(2번 탭 2단 점프) · 왼쪽 꾹 = 슬라이드<br>세로·가로 화면 모두 지원 📱</p>
       </div>
     </div>
 
     <!-- 카운트다운 -->
     <div id="countdown" class="screen hidden"><span id="countNum">3</span></div>
 
+    <!-- 일시정지 -->
+    <div id="pause" class="overlay hidden">
+      <div class="panel">
+        <h3>잠깐 쉬는 중 🐕</h3>
+        <button id="resumeBtn">계속 달리기 ▶</button>
+        <button id="pMuteBtn" class="ghost">🔊 소리 끄기</button>
+        <button id="quitBtn" class="ghost">처음으로</button>
+      </div>
+    </div>
+
+    <!-- 부활 -->
+    <div id="revive" class="overlay hidden">
+      <div class="panel revive-panel">
+        <h3>🐯 앗, 잡히기 직전!</h3>
+        <p class="revive-sub">딱 한 번 다시 달릴 수 있다멍!</p>
+        <button id="reviveBtn">🦴 이어서 달리기! <span id="reviveCnt" class="revive-cnt">4</span></button>
+        <button id="reviveSkip" class="ghost">그만 달릴래…</button>
+      </div>
+    </div>
+
+    <!-- 도전과제 패널 -->
+    <div id="achPanel" class="overlay hidden">
+      <div class="panel ach-panel">
+        <h3 id="achTitle">🏅 도전과제</h3>
+        <div id="achList"></div>
+        <button id="achClose">닫기</button>
+      </div>
+    </div>
+
     <!-- 게임 오버 -->
     <div id="gameover" class="screen hidden">
       <div class="go-shade"></div>
       <div class="go-content">
         <h2>잡혔다멍…! 😱</h2>
+        <div id="goNew" class="go-new hidden">🎉 신기록!! 🎉</div>
         <div class="go-stats">
           <div class="go-score"><span id="goScore">0</span>m</div>
-          <div class="go-sub">🦴 <span id="goBones">0</span>개 &nbsp;·&nbsp; 최고 기록 <span id="goBest">0</span>m</div>
+          <div class="go-grid">
+            <span>🦴 <b id="goBones">0</b></span>
+            <span>🔥 콤보 <b id="goCombo">0</b></span>
+            <span>🌈 피버 <b id="goFever">0</b></span>
+          </div>
+          <div class="go-sub">🏆 최고 기록 <span id="goBest">0</span>m</div>
+          <div id="goAch" class="go-ach hidden"></div>
         </div>
         <button id="retryBtn">다시 등원하기 🚲</button>
-        <button id="introBtn" class="ghost">인트로 다시보기 🎬</button>
+        <div class="go-row">
+          <button id="shareBtn" class="ghost">📣 자랑하기</button>
+          <button id="goAchBtn" class="ghost">🏅 도전과제</button>
+          <button id="introBtn" class="ghost">🎬 인트로</button>
+        </div>
       </div>
     </div>
 
   </div>
-  <script src="game.js"></script>
+  <script src="game.js?v=2"></script>
 </body>
 </html>

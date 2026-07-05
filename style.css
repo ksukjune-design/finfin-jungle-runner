@@ -76,6 +76,27 @@ html, body {
 }
 #startBtn:active, #retryBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c96f0a; }
 .hint { color: rgba(255,255,255,.75); font-size: 12.5px; margin-top: 18px; font-weight: 500; }
+#titleMeta {
+  color: #ffe9a8; font-size: 14px; font-weight: 700;
+  margin-bottom: 18px; text-shadow: 0 2px 8px rgba(0,0,0,.6);
+}
+#titleMeta:empty { display: none; }
+#startBtn { animation: btnPulse 1.6s ease-in-out infinite; }
+@keyframes btnPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+#achBtn { margin-top: 12px; }
+.icon-btn {
+  position: absolute; z-index: 3;
+  top: max(16px, env(safe-area-inset-top, 0px) + 8px);
+  right: 16px;
+  background: rgba(0,0,0,.5); color: #fff;
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 50%; width: 44px; height: 44px;
+  font-size: 20px; cursor: pointer;
+  backdrop-filter: blur(4px);
+}
 
 /* ---------- 인트로 ---------- */
 #intro { background: #000; }
@@ -137,6 +158,80 @@ html, body {
   border-radius: 999px;
   transition: width .25s ease-out;
 }
+.combo-pill {
+  background: rgba(120,50,8,.72); color: #ffd75e;
+  border-color: rgba(255,184,77,.55);
+  animation: comboBump .25s ease-out;
+}
+@keyframes comboBump {
+  0% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+#feverbar-wrap {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px;
+}
+.fever-icon { font-size: 13px; filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+#feverbar {
+  flex: 1; height: 7px; border-radius: 999px;
+  background: rgba(8,26,14,.6);
+  border: 1px solid rgba(255,255,255,.18);
+  overflow: hidden;
+}
+#feverbar-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #ffd75e, #ff8a3d, #ff5ecb);
+  border-radius: 999px;
+  transition: width .2s ease-out;
+}
+.fever-on #feverbar { border-color: #ffd75e; box-shadow: 0 0 10px rgba(255,200,60,.8); }
+.fever-on #feverbar-fill { animation: feverGlow .4s linear infinite alternate; }
+@keyframes feverGlow {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.5); }
+}
+#effects {
+  position: absolute; left: 14px; top: 108px;
+  font-size: 14px; padding: 6px 12px; min-width: 0;
+}
+#pauseBtn {
+  position: absolute; right: 12px; top: 96px;
+  pointer-events: auto;
+  background: rgba(8,26,14,.6); color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 50%; width: 42px; height: 42px;
+  font-size: 16px; cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+/* ---------- 조작 안내 오버레이 ---------- */
+#zones {
+  position: absolute; inset: 0; z-index: 6;
+  display: flex; pointer-events: none;
+  animation: zonesFade 4.2s ease-in-out forwards;
+}
+@keyframes zonesFade {
+  0% { opacity: 0; }
+  12% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.zone {
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 18vh;
+}
+.zone span {
+  color: #fff; text-align: center; font-size: 15px; font-weight: 600;
+  line-height: 1.5; text-shadow: 0 2px 10px rgba(0,0,0,.8);
+  background: rgba(8,26,14,.42);
+  border: 1.5px dashed rgba(255,255,255,.45);
+  border-radius: 18px; padding: 14px 18px;
+  backdrop-filter: blur(2px);
+}
+.zone b { font-size: 18px; color: #ffd75e; }
+.zone-l { width: 38%; border-right: 1.5px dashed rgba(255,255,255,.25); }
+.zone-r { width: 62%; }
+
 #toast {
   position: absolute; left: 50%; top: 84px;
   transform: translateX(-50%);
@@ -153,6 +248,69 @@ html, body {
   75% { opacity: 1; }
   100% { opacity: 0; transform: translateX(-50%) translateY(-12px); }
 }
+
+/* ---------- 오버레이 공통 (일시정지/부활/도전과제) ---------- */
+.overlay {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(5,14,8,.68);
+  backdrop-filter: blur(3px);
+}
+.panel {
+  display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(180deg, #14351f, #0c2414);
+  border: 1.5px solid rgba(255,232,168,.35);
+  border-radius: 22px;
+  padding: 26px 30px;
+  max-width: min(86vw, 420px);
+  box-shadow: 0 18px 50px rgba(0,0,0,.5);
+}
+.panel h3 { color: #fff; font-size: 22px; font-weight: 900; margin-bottom: 16px; }
+.panel button {
+  font-family: inherit;
+  background: linear-gradient(180deg, #ffb84d, #f79422);
+  color: #4a2400; font-size: 17px; font-weight: 900;
+  border: none; border-radius: 999px;
+  padding: 13px 34px; cursor: pointer;
+  box-shadow: 0 4px 0 #c96f0a;
+  margin-top: 6px;
+}
+.panel button:active { transform: translateY(3px); box-shadow: 0 1px 0 #c96f0a; }
+.panel .ghost {
+  background: rgba(0,0,0,.35); color: #fff;
+  border: 1.5px solid rgba(255,255,255,.45);
+  box-shadow: none; font-weight: 700; font-size: 14px;
+  padding: 10px 24px; margin-top: 10px;
+}
+.revive-panel h3 { margin-bottom: 4px; }
+.revive-sub { color: #ffe9c9; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+#reviveBtn {
+  font-size: 20px; padding: 16px 38px;
+  animation: btnPulse .9s ease-in-out infinite;
+}
+.revive-cnt {
+  display: inline-block; background: rgba(74,36,0,.25);
+  border-radius: 50%; width: 28px; height: 28px; line-height: 28px;
+  font-size: 16px; margin-left: 6px;
+}
+.ach-panel { max-height: 78vh; }
+#achList {
+  overflow-y: auto; width: min(78vw, 340px);
+  margin-bottom: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+.ach-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 10px; border-radius: 12px;
+  opacity: .5;
+}
+.ach-item.on { opacity: 1; background: rgba(255,215,94,.10); }
+.ach-item + .ach-item { margin-top: 4px; }
+.ach-icon { font-size: 24px; width: 32px; text-align: center; }
+.ach-txt { flex: 1; display: flex; flex-direction: column; }
+.ach-txt b { color: #fff; font-size: 14.5px; }
+.ach-txt small { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 1px; }
+.ach-check { color: #7dff9e; font-weight: 900; font-size: 17px; }
 
 /* ---------- 게임 오버 ---------- */
 #gameover {
@@ -174,7 +332,38 @@ html, body {
   color: #fff; font-size: 38px; font-weight: 900;
   text-shadow: 0 4px 16px rgba(0,0,0,.7);
 }
+.go-new {
+  margin-top: 8px;
+  background: linear-gradient(90deg, #ffd75e, #ff8a3d, #ff5ecb, #ffd75e);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 26px; font-weight: 900;
+  animation: recordShine 1.4s linear infinite, recordBounce .7s ease-in-out infinite alternate;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,.7));
+}
+@keyframes recordShine { from { background-position: 0 0; } to { background-position: 300% 0; } }
+@keyframes recordBounce { from { transform: scale(1); } to { transform: scale(1.12); } }
 .go-stats { margin-top: 6px; text-align: center; }
+.go-grid {
+  display: flex; gap: 16px; justify-content: center;
+  color: #ffe9c9; font-size: 14.5px; font-weight: 700;
+  margin-top: 4px; text-shadow: 0 2px 8px rgba(0,0,0,.8);
+}
+.go-grid b { color: #ffd75e; }
+.go-ach {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
+  margin-top: 10px; max-width: 88vw;
+}
+.go-badge {
+  background: rgba(255,215,94,.16); color: #ffe9a8;
+  border: 1px solid rgba(255,215,94,.5);
+  border-radius: 999px; padding: 5px 12px;
+  font-size: 12.5px; font-weight: 800;
+  animation: comboBump .4s ease-out;
+}
+.go-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; justify-content: center; }
+.go-row .ghost { margin-top: 0; }
 .go-score {
   color: #ffd75e; font-size: 54px; font-weight: 900;
   text-shadow: 0 4px 16px rgba(0,0,0,.7);
@@ -198,15 +387,27 @@ html, body {
 
 @media (orientation: landscape) and (max-height: 500px) {
   /* 낮은 가로 화면: 시작/게임오버 화면을 컴팩트하게 */
-  #start h1 { font-size: clamp(30px, 8vh, 44px); margin-bottom: 8px; }
-  .subtitle { font-size: 13px; margin-bottom: 12px; }
-  .badge { margin-bottom: 8px; }
-  .start-content { padding-bottom: 20px; }
-  #startBtn, #retryBtn { font-size: 18px; padding: 12px 40px; }
-  .hint { margin-top: 10px; font-size: 11px; }
-  #gameover h2 { font-size: 26px; }
-  .go-score { font-size: 36px; }
-  .go-content { padding-top: 16px; padding-bottom: 18px; }
-  .ghost { margin-top: 8px; padding: 8px 20px; font-size: 13px; }
-  #tigerbar-wrap { max-width: 60vw; margin-left: auto; margin-right: auto; }
+  #start h1 { font-size: clamp(26px, 7vh, 40px); margin-bottom: 6px; }
+  .subtitle { font-size: 12px; margin-bottom: 8px; }
+  .badge { margin-bottom: 6px; }
+  #titleMeta { font-size: 12px; margin-bottom: 10px; }
+  .start-content { padding-bottom: 16px; }
+  #startBtn, #retryBtn { font-size: 17px; padding: 11px 36px; }
+  #achBtn { margin-top: 8px; }
+  .hint { margin-top: 8px; font-size: 10.5px; }
+  #gameover h2 { font-size: 22px; }
+  .go-new { font-size: 18px; margin-top: 2px; }
+  .go-score { font-size: 32px; }
+  .go-grid { font-size: 12.5px; gap: 12px; }
+  .go-content { padding-top: 12px; padding-bottom: 14px; }
+  .ghost { margin-top: 6px; padding: 8px 18px; font-size: 12.5px; }
+  .go-row { margin-top: 8px; }
+  #tigerbar-wrap, #feverbar-wrap { max-width: 60vw; margin-left: auto; margin-right: auto; }
+  #effects { top: 86px; }
+  #pauseBtn { top: 74px; right: max(12px, env(safe-area-inset-right, 0px)); }
+  .panel { padding: 18px 22px; max-height: 88vh; }
+  .panel h3 { font-size: 18px; margin-bottom: 10px; }
+  .ach-panel { max-height: 88vh; }
+  #achList { max-height: 46vh; }
+  .zone { padding-bottom: 8vh; }
 }

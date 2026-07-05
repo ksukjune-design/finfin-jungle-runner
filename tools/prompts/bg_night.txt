@@ -1,0 +1,3 @@
+Using the attached jungle background image as the exact compositional reference, repaint the SAME jungle scene (same layout of trees, ferns, path opening, depth) at NIGHT: deep blue-indigo moonlit jungle, pale silver-blue moonbeams filtering through the canopy, foliage silhouettes in dark teal and navy, dozens of tiny glowing yellow-green FIREFLIES scattered at different depths (small soft glowing dots), a faint cool mist near the ground. Magical but still readable — not pitch black; midtones stay visible. Painterly, soft-focus, suitable as a distant parallax background for a side-scrolling mobile runner game.
+
+No characters, no animals, no text, no watermark. Wide landscape composition, seamless soft edges (the image will be tiled horizontally with mirroring).

@@ -1,0 +1,10 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key green background (#00FF00). No gradients, no shadows, no floor. Each item floats centered in its own quadrant with generous margin, never touching quadrant borders.
+
+Four collectible power-up icons for a cute mobile runner game, all in the same style: cute stylized 3D-rendered cartoon (mobile game quality), clean crisp silhouettes, vibrant candy-like colors, slight glossy shine, each with a subtle soft outer glow ring.
+
+- Top-left: a cute PINK KIDS BIKE HELMET (rounded toddler helmet, white stripes, small star sticker) — represents a shield.
+- Top-right: a classic horseshoe MAGNET, red with silver-white tips, with two tiny cartoon bones floating toward it.
+- Bottom-left: an orange-red ROCKET BOOSTER / jet flame thruster, small and chunky like a toy, with a cartoon flame burst.
+- Bottom-right: a GOLDEN BONE, shiny gold dog bone with sparkle stars around it.
+
+Absolutely no text, no watermark, no background scenery, no grid lines.

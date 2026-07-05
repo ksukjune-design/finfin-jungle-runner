@@ -1,0 +1,7 @@
+Single game obstacle sprite on a pure flat solid chroma-key MAGENTA background (#FF00FF). No gradients, no shadows, no floor. (Magenta background because the object itself contains green leaves.)
+
+Object: a LOW-HANGING JUNGLE BRANCH obstacle for a side-scrolling runner game. A thick, dark-brown horizontal tree branch with rough bark spans the lower part of the image, with lush tropical leaves and a few hanging vines and moss growing on top of it and drooping from it. The branch hangs from above: several sturdy vines/smaller branches extend from the TOP EDGE of the image down to the horizontal branch, so the whole object reads as "hanging from the jungle canopy". The BOTTOM edge of the horizontal branch is clean and clearly defined (a player must duck under it).
+
+Style: cute stylized 3D-rendered cartoon (mobile game quality), matching a vibrant jungle runner game — saturated greens and warm browns, clean crisp silhouette, slight cartoonish exaggeration. The horizontal branch is wide (spans most of the image width), the hanging vines are vertical.
+
+Absolutely no text, no watermark, no background scenery, no ground.

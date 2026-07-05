@@ -1,0 +1,9 @@
+Single game sprite on a pure flat solid chroma-key green background (#00FF00). No gradients, no ground shadow, no floor — character floats on pure green.
+
+Character (EXACTLY the same character as the attached reference image): a cute Shiba Inu dog with orange-cream fur, wearing a white headband with Korean text "등원은 재밌쟁", riding a pink "FINFIN" kids balance bike (NO pedals, NO chain, black EVA wheels, black grips, black saddle, "FINFIN" logo on pink frame).
+
+Pose: SLIDING / DUCKING — the dog crouches EXTREMELY LOW on the bike, chest pressed almost flat against the top tube of the frame, head down level with the handlebar, ears pinned flat back, eyes squinting with effort, hind legs tucked up on the frame. The whole silhouette is LOW and LONG, about half the normal riding height, as if ducking under a low branch. Bike stays level on both wheels.
+
+Style: cute stylized 3D-rendered cartoon game character (mobile game quality), clean crisp silhouette edges, vibrant colors, FULL BODY side view facing RIGHT, generous margin from image edges.
+
+Absolutely no text labels, no watermark, no background scenery.
