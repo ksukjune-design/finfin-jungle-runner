@@ -372,7 +372,7 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
   if (G.shots) for (const s of G.shots) { s.x *= rx; s.y = groundY - (oldGroundY - s.y) * rs; s.vy *= rs; s.vx *= rs; }
   for (const s of G.signs) s.x *= rx;
   for (const t of G.hints) t.x *= rx;
-  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 897 * SC;
+  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 950 * SC;
   G.spawnPx *= rx;
   G.parts = []; G.pops = [];
 }
@@ -386,10 +386,107 @@ let state = ST.MENU;
 
 const G = {};
 let runFrom = 0; // 체크포인트 시작 지점 (m)
+
+// ---------- 다이내믹 카메라 / 슬로모션 / 컷인 (레이싱 연출 코어) ----------
+const cam = { z: 1, punchZ: 1, punchT: 0, punchDur: 0.5 };
+function camPunch(z, dur = 0.55) { cam.punchZ = z; cam.punchT = dur; cam.punchDur = dur; }
+function camTick(dt) {
+  // 기본 줌: 속도가 붙을수록 살짝 와이드 (질주감)
+  let target = G.maxSpeed ? 1.02 - (G.speed / G.maxSpeed) * 0.07 : 1;
+  if (cam.punchT > 0) {
+    cam.punchT -= dt;
+    const k = Math.max(0, cam.punchT / cam.punchDur);
+    target = target + (cam.punchZ - target) * (k * k * (3 - 2 * k)); // smoothstep 감쇠
+  }
+  cam.z += (target - cam.z) * Math.min(1, dt * 7);
+}
+function applyCam() {
+  if (Math.abs(cam.z - 1) < 0.001 || !G.player) return;
+  const p = G.player;
+  // 플레이어 상체를 초점으로 줌 (화면 중심과 블렌드해 과도한 시프트 방지)
+  const fx = p.x * 0.7 + W * 0.5 * 0.3;
+  const fy = (p.y - p.h * 0.55) * 0.7 + H * 0.5 * 0.3;
+  ctx.translate(fx, fy);
+  ctx.scale(cam.z, cam.z);
+  ctx.translate(-fx, -fy);
+}
+// 슬로모션: ts가 1로 서서히 복귀
+let ts = 1, tsHold = 0;
+function slowmo(v, hold = 0.3) { ts = v; tsHold = hold; }
+// 컷인 (격투게임식 캐릭터 클로즈업 패널)
+function cutIn(imgKey, txt, col = '#ffd75e', dur = 0.85) {
+  G.cutIn = { imgKey, txt, col, t: 0, dur };
+}
+function drawCutIn() {
+  const c = G.cutIn;
+  if (!c) return;
+  const u = c.t / c.dur;
+  // 진입 easeOutBack / 퇴장 ease-in
+  const ein = u < 0.22 ? (t => { const s = 1.7; const x = t / 0.22; return 1 + (s + 1) * Math.pow(x - 1, 3) + s * Math.pow(x - 1, 2); })(u) : 1;
+  const eout = u > 0.78 ? 1 - (u - 0.78) / 0.22 : 1;
+  const a = Math.max(0, Math.min(ein, 1) * eout);
+  if (a <= 0) return;
+  const bandH = Math.min(H * 0.24, 170 * SC);
+  const cy = H * 0.34;
+  ctx.save();
+  ctx.globalAlpha = a;
+  // 대각 컬러 밴드
+  ctx.save();
+  ctx.translate(0, cy);
+  ctx.transform(1, -0.06, 0, 1, 0, 0);
+  const bg = ctx.createLinearGradient(0, 0, W, 0);
+  bg.addColorStop(0, 'rgba(10,8,4,0.0)');
+  bg.addColorStop(0.18, 'rgba(12,10,5,0.88)');
+  bg.addColorStop(0.85, 'rgba(12,10,5,0.88)');
+  bg.addColorStop(1, 'rgba(10,8,4,0.0)');
+  ctx.fillStyle = bg;
+  ctx.fillRect(-20, -bandH / 2, W + 40, bandH);
+  ctx.strokeStyle = c.col;
+  ctx.lineWidth = 3 * SC;
+  ctx.beginPath();
+  ctx.moveTo(-20, -bandH / 2); ctx.lineTo(W + 40, -bandH / 2);
+  ctx.moveTo(-20, bandH / 2); ctx.lineTo(W + 40, bandH / 2);
+  ctx.stroke();
+  // 스피드 라인 장식
+  ctx.strokeStyle = `rgba(255,255,255,0.25)`;
+  ctx.lineWidth = 2 * SC;
+  for (let i = 0; i < 5; i++) {
+    const ly = -bandH / 2 + bandH * (0.15 + i * 0.17);
+    const off = ((c.t * (900 + i * 240)) % (W + 300)) - 150;
+    ctx.beginPath();
+    ctx.moveTo(W - off, ly);
+    ctx.lineTo(W - off + (70 + i * 26) * SC, ly);
+    ctx.stroke();
+  }
+  // 얼굴 슬라이드 인
+  const im = img[c.imgKey];
+  const slideX = (1 - Math.min(1, ein)) * -W * 0.4;
+  if (im && im.width) {
+    const fh = bandH * 1.28;
+    const fw = fh * (im.width / im.height);
+    ctx.drawImage(im, W * 0.13 + slideX, -fh * 0.56, fw, fh);
+  }
+  // 텍스트
+  const fs = Math.min(40 * SC, W * 0.075);
+  ctx.font = `900 ${fs}px 'Apple SD Gothic Neo','Malgun Gothic',sans-serif`;
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = fs * 0.2;
+  ctx.strokeStyle = 'rgba(15,10,4,0.9)';
+  const tx = W * 0.13 + bandH * 1.15 + slideX * 0.5;
+  ctx.strokeText(c.txt, tx, 2);
+  ctx.fillStyle = c.col;
+  ctx.fillText(c.txt, tx, 2);
+  ctx.restore();
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
 function resetGame(fromM = runFrom) {
-  G.speed = 380 * SC;
-  G.baseSpeed = 380 * SC;
-  G.maxSpeed = 897 * SC;
+  G.speed = 410 * SC;
+  G.baseSpeed = 410 * SC;
+  G.maxSpeed = 950 * SC;
+  cam.z = 1; cam.punchT = 0;
+  ts = 1; tsHold = 0;
+  G.cutIn = null;
   G.score = 0;
   G.bonesCnt = 0;
   G.tigerDist = 62;
@@ -518,6 +615,7 @@ function startStageClear(newStg) {
   if (newStg > saved) store.set('finfin_stage', newStg);
   if (newStg >= 4) unlock('stage5');
   showBanner(`STAGE ${newStg} 클리어!! 🎉`);
+  camPunch(1.15, 1.2);
   sfx.record(); sfx.fever(); vib([40, 40, 90]);
   G.flash = 0.25;
   updateHUD(true); // 세리머니 중 HUD가 경계 직전 값(999m)으로 멈춰 보이지 않게
@@ -532,6 +630,8 @@ function startFinish() {
   totals.runs++;
   store.set('finfin_tot', totals);
   showBanner('🏫 유치원 도착!!! 🎉');
+  camPunch(1.22, 1.1); slowmo(0.4, 0.5);
+  cutIn('faceShiba', '등원 성공!! 🎉');
   sfx.record(); sfx.fever(); vib([60, 50, 60, 50, 140]);
   G.flash = 0.35;
   BGM.stop();
@@ -616,6 +716,7 @@ function jumpInput() {
     sfx.djump(); dust(p.x, p.y, 6, true);
     if (p.jumps >= 3) { // 로켓 3단 점프 화염
       sparkle(p.x, p.y + 10 * SC, 10, '255,150,60');
+      camPunch(1.10, 0.3);
       sfx.boost();
     }
   }
@@ -1034,6 +1135,8 @@ function startCaught() {
   const p = G.player;
   ring(p.x, p.y - p.h * 0.5, '255,90,60');
   sparkle(p.x, p.y - p.h * 0.5, 18, '255,150,90');
+  camPunch(1.32, 0.9); slowmo(0.42, 0.45);
+  cutIn('faceTiger', '잡았다 어흥!!', '#ff8a66');
   sfx.caught(); vib([60, 40, 120]);
 }
 function offerRevive() {
@@ -1054,6 +1157,8 @@ function doRevive() {
   G.speed = G.baseSpeed * 0.7;
   G.spawnPx = 700 * SC;
   state = ST.RUN;
+  camPunch(1.35, 0.8); slowmo(0.32, 0.4);
+  cutIn('faceShiba', '포기란 없다멍!!', '#8ff0ff');
   sfx.revive(); vib(30);
   sparkle(p.x, p.y - p.h * 0.5, 20, '255,240,150');
   showToast('🦴 다시 달린다멍!! 포기란 없다!');
@@ -1069,7 +1174,8 @@ function startFever() {
   const p = G.player;
   ring(p.x, p.y - p.h * 0.5, '255,220,120', 420);
   sparkle(p.x, p.y - p.h * 0.5, 20, '255,220,120');
-  showBanner('🌈 FEVER TIME!!');
+  camPunch(1.30, 0.7); slowmo(0.35, 0.28);
+  cutIn('faceShiba', '피버 타임!! 🌈');
   sfx.fever(); vib(40);
   if (G.feverCnt >= 3) unlock('fever3');
 }
@@ -1084,6 +1190,7 @@ function collectPow(w) {
   } else if (w.kind === 'boost') {
     G.boostT = G.perks.boostLong ? 3.5 : 2.3;
     G.tigerDist = Math.min(100, G.tigerDist + 10);
+    camPunch(1.22, 0.5);
     sfx.boost(); vib(50); pop(w.x, w.y - 30 * SC, '🚀 부스터!!', '#ffcf5e', true);
   } else if (w.kind === 'gold') {
     G.bonesCnt += 5;
@@ -1098,6 +1205,7 @@ function collectPow(w) {
 // ---------- 업데이트 ----------
 function update(dt) {
   const p = G.player;
+  camTick(dt);
 
   if (state === ST.CLEAR || state === ST.FIN) {
     // 폭죽 페이즈: 월드는 정지, 이펙트만 진행
@@ -1133,8 +1241,8 @@ function update(dt) {
   }
   if (state !== ST.RUN) return;
 
-  // 속도 (피버/부스터 배속) — 전체 1.15배 상향
-  const ramp = 5.3 * SC;
+  // 속도 (피버/부스터 배속) — 레이싱 체감 상향
+  const ramp = 5.7 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
   let target = G.baseSpeed * (bike().speedMult || 1);
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
@@ -1261,7 +1369,7 @@ function update(dt) {
         p.falling = true;
       } else {
         p.y = groundY; p.vy = 0; p.onGround = true; p.jumps = 0;
-        p.squash = p.fastFall ? 0.16 : 0.11;   // 착지 스쿼시 (내려찍기는 더 강하게)
+        p.squash = p.squashDur = p.fastFall ? 0.16 : 0.11;   // 착지 스쿼시 (내려찍기는 더 강하게)
         if (p.fastFall) { G.shake = Math.max(G.shake, 0.18); dust(p.x, groundY, 10); }
         p.fastFall = false;
         dust(p.x, groundY, 6);
@@ -1279,6 +1387,13 @@ function update(dt) {
   }
   if (p.invuln > 0) p.invuln -= dt;
   if (p.squash > 0) p.squash -= dt;
+
+  // 표시 각도 보간 (공중 회전·지상 가속 린 — 스냅 없는 부드러운 모션)
+  let targAng = 0;
+  if (!p.onGround && !p.sliding) targAng = Math.max(-0.20, Math.min(0.32, p.vy / (2800 * SC)));
+  else if (p.sliding) targAng = -0.04;
+  else targAng = Math.max(-0.04, Math.min(0.10, (G.speed - G.baseSpeed) / (G.maxSpeed * 1.6)));
+  p.dispAng = (p.dispAng || 0) + (targAng - (p.dispAng || 0)) * Math.min(1, dt * 11);
 
   // 배너 타이머
   if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) G.banner = null; }
@@ -1546,6 +1661,7 @@ function stageBg(i) {
 function draw() {
   ctx.clearRect(0, 0, W, H);
   ctx.save();
+  applyCam();
   if (G.shake > 0) ctx.translate((Math.random() - 0.5) * 14 * G.shake, (Math.random() - 0.5) * 14 * G.shake);
 
   drawBG();
@@ -1559,10 +1675,13 @@ function draw() {
   drawParts();
   drawPops();
   drawHints();
-  drawSpeedLines();
-  drawBanner();
 
   ctx.restore();
+
+  // 스크린 공간 연출 (줌 영향 없음)
+  drawSpeedLines();
+  drawBanner();
+  drawCutIn();
 
   // 스테이지 틴트
   const tint = STAGES[Math.min(G.stage, 9)].tint;
@@ -1620,7 +1739,7 @@ function drawBG() {
     if (!im || !im.width) return;
     const bw = bh * (im.width / im.height);
     ctx.globalAlpha = alpha;
-    tileLoop(bw, G.worldX * 42 * SC * 0.22, (bx, m) => drawMirrorTile(im, bx, 0, bw, bh, m));
+    tileLoop(bw, G.worldX * 42 * SC * 0.30, (bx, m) => drawMirrorTile(im, bx, 0, bw, bh, m));
     ctx.globalAlpha = 1;
   };
   if (G.stageFade < 1) {
@@ -1636,8 +1755,8 @@ function drawBG() {
     : (si === 8 || si === 9) ? 'rgba(12,14,20,0.35)'
     : 'rgba(7,22,12,0.5)';
   ctx.fillStyle = mCol;
-  tileLoop(mw, G.worldX * 42 * SC * 0.55, (bx, m) => {
-    const seed = ((Math.round(bx + G.worldX * 42 * SC * 0.55) / mw) | 0);
+  tileLoop(mw, G.worldX * 42 * SC * 0.64, (bx, m) => {
+    const seed = ((Math.round(bx + G.worldX * 42 * SC * 0.64) / mw) | 0);
     const h1 = 46 + ((seed * 2654435761 >>> 8) % 70);
     const h2 = 30 + ((seed * 40503 >>> 4) % 52);
     ctx.beginPath();
@@ -1685,6 +1804,23 @@ function drawGround() {
     ctx.fillStyle = 'rgba(255,220,160,0.18)';
     ctx.fillRect(h.x - 2, groundY - surfOff - 2, 4, 10 * SC);
     ctx.fillRect(h.x + h.w - 2, groundY - surfOff - 2, 4, 10 * SC);
+  }
+  // 고속 지면 스트릭 (노면이 흐르는 레이싱 체감)
+  const spdK2 = G.maxSpeed ? G.speed / G.maxSpeed : 0;
+  if (spdK2 > 0.5) {
+    const sa = 0.14 * (spdK2 - 0.5) / 0.5;
+    ctx.strokeStyle = `rgba(255,240,210,${sa})`;
+    ctx.lineWidth = 2 * SC;
+    const scroll = G.worldX * 42 * SC;
+    for (let i = 0; i < 6; i++) {
+      const seg = 340 * SC + i * 57 * SC;
+      const x = W - ((scroll * (1.1 + i * 0.06)) % (W + seg));
+      const y = groundY + (4 + (i % 3) * 9) * SC;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + (60 + i * 18) * SC, y);
+      ctx.stroke();
+    }
   }
 }
 
@@ -1888,8 +2024,21 @@ function drawPlayer() {
   const im = pickShiba();
   if (!im || !im.width) return;
   const dw = p.w * 1.12, dh = dw * (im.height / im.width);
-  let ang = 0;
-  if (!p.onGround) ang = Math.max(-0.20, Math.min(0.32, p.vy / (2800 * SC)));
+  const ang = p.dispAng || 0;
+  // 고스트 잔상 (고속/부스터/피버 — 레이싱 스피드감)
+  const spdK = G.maxSpeed ? G.speed / G.maxSpeed : 0;
+  if ((spdK > 0.62 || G.boostT > 0 || G.feverT > 0) && p.invuln <= 0) {
+    const gN = G.boostT > 0 ? 3 : 2;
+    for (let gi = gN; gi >= 1; gi--) {
+      ctx.save();
+      ctx.globalAlpha = 0.05 + 0.05 * (gN - gi);
+      ctx.translate(p.x - gi * (10 + spdK * 14) * SC, p.y);
+      ctx.rotate(ang);
+      ctx.drawImage(im, -dw * 0.52, -dh * 0.94, dw, dh);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
   if (p.invuln > 0 && Math.floor(p.invuln * 12) % 2 === 0) ctx.globalAlpha = 0.35;
   ctx.save();
   ctx.translate(p.x, p.y);
@@ -1904,13 +2053,19 @@ function drawPlayer() {
     ctx.fill();
     ctx.restore();
   }
-  // 스쿼시 & 스트레치 (착지 눌림 / 상승 늘어남) — 발 기준 앵커
+  // 스쿼시 & 스트레치 (스프링 곡선: 눌림 → 복원 오버슈트) — 발 기준 앵커
   let sx = 1, sy = 1;
   if (p.squash > 0) {
-    const k = Math.min(1, p.squash / 0.11);
-    sx = 1 + 0.15 * k; sy = 1 - 0.20 * k;
+    const k = Math.min(1, p.squash / (p.squashDur || 0.11));
+    const s = Math.sin(k * Math.PI * 0.5);
+    sx = 1 + 0.16 * s; sy = 1 - 0.22 * s;
+    if (k < 0.32) { // 복원 반동 (통통 튀는 느낌)
+      const o = Math.sin((0.32 - k) / 0.32 * Math.PI);
+      sy += 0.06 * o; sx -= 0.045 * o;
+    }
   } else if (!p.onGround && p.vy < -260 * SC) {
-    sx = 0.94; sy = 1.08;
+    const st = Math.min(1, -p.vy / (1200 * SC));
+    sx = 1 - 0.07 * st; sy = 1 + 0.09 * st;
   }
   if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
   // 피버/부스터 오라
@@ -1987,6 +2142,7 @@ function drawTiger() {
   const bob = Math.sin(G.tiger.anim * 0.9) * 5 * SC;
   ctx.save();
   ctx.translate(tx + dw / 2, groundY + bob - 2 * SC);
+  ctx.rotate(Math.sin(G.tiger.anim * 0.9) * 0.035); // 질주 스웨이
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(0, 6 * SC, dw * 0.4, 11 * SC, 0, 0, Math.PI * 2);
@@ -2119,8 +2275,14 @@ function drawBanner() {
 }
 
 function drawSpeedLines() {
-  if (G.boostT <= 0 && G.feverT <= 0) return;
-  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  // 부스터/피버 + 고속 주행 시 상시 윈드라인 (속도 비례 강도)
+  let a = 0;
+  if (G.boostT > 0 || G.feverT > 0) a = 0.16;
+  else if (G.maxSpeed && G.speed > G.maxSpeed * 0.68) {
+    a = 0.11 * (G.speed / G.maxSpeed - 0.68) / 0.32;
+  }
+  if (a <= 0.005) return;
+  ctx.strokeStyle = `rgba(255,255,255,${a})`;
   ctx.lineWidth = 2.5 * SC;
   for (let i = 0; i < 7; i++) {
     const y = ((performance.now() * 0.05 + i * 137) % 1) * H * 0.8 + H * 0.05;
@@ -2143,8 +2305,13 @@ function frame(dt, skipDraw) {
     if (assetsReady && !skipDraw) draw();
     return;
   }
+  // 슬로모션 (드라마 연출 후 서서히 복귀)
+  if (tsHold > 0) tsHold -= dt;
+  else if (ts < 1) ts = Math.min(1, ts + dt * 2.1);
+  const sdt = dt * ts;
+  if (G.cutIn) { G.cutIn.t += dt; if (G.cutIn.t > G.cutIn.dur) G.cutIn = null; }
   if (state === ST.RUN || state === ST.CAUGHT || state === ST.REVIVE ||
-      state === ST.CLEAR || state === ST.FIN) update(dt);
+      state === ST.CLEAR || state === ST.FIN) update(sdt);
   if (assetsReady && !skipDraw && state !== ST.MENU && state !== ST.INTRO) draw();
 }
 function loop(t) {
