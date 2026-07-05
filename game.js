@@ -166,7 +166,7 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
   for (const w of G.pows) { w.x *= rx; w.y = groundY - (oldGroundY - w.y) * rs; }
   for (const s of G.signs) s.x *= rx;
   for (const t of G.hints) t.x *= rx;
-  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 820 * SC;
+  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 780 * SC;
   G.spawnPx *= rx;
   G.parts = []; G.pops = [];
 }
@@ -182,7 +182,7 @@ const G = {};
 function resetGame() {
   G.speed = 330 * SC;
   G.baseSpeed = 330 * SC;
-  G.maxSpeed = 820 * SC;
+  G.maxSpeed = 780 * SC;
   G.score = 0;
   G.bonesCnt = 0;
   G.tigerDist = 62;
@@ -218,11 +218,14 @@ function resetGame() {
   G.powCd = 2;
   G.queue = totals.runs === 0 ? ['bones_line', 'rock', 'bones_arc', 'log', 'branch_intro', 'bones_line'] : [];
   // 기록
-  G.nearCnt = 0; G.slideCnt = 0; G.noHitDist = 0; G.newAch = [];
+  G.nearCnt = 0; G.slideCnt = 0; G.noHitDist = 0; G.newAch = []; G.hitCnt = 0;
   G.reviveUsed = false; G.reviveT = 0;
   // 스테이지
   G.stage = 0; G.stagePrev = 0; G.stageFade = 1;
   G.roarT = 0.5;
+  // 연출
+  G.hitStop = 0; G.banner = null; G.bestBroken = false; G.deathBy = '';
+  G.player.squash = 0;
   updateHUD(true);
 }
 
@@ -261,10 +264,10 @@ function jumpInput() {
   if (p.falling) return;
   if (p.sliding) { p.sliding = false; p.slideLock = 0; }
   if (p.onGround) {
-    p.vy = -1060 * SC; p.onGround = false; p.jumps = 1;
+    p.vy = -1120 * SC; p.onGround = false; p.jumps = 1;
     sfx.jump(); dust(p.x, groundY, 8);
   } else if (p.jumps === 1) {
-    p.vy = -940 * SC; p.jumps = 2;
+    p.vy = -980 * SC; p.jumps = 2;
     sfx.djump(); dust(p.x, p.y, 6, true);
   }
 }
@@ -339,6 +342,14 @@ function hsl2rgb(h, s, l) {
 function pop(x, y, txt, c = '#ffe9a8', big = false) {
   G.pops.push({ x, y, txt, t: 0, life: big ? 1.1 : 0.8, c, big });
 }
+// 확장 링 이펙트 (피격/수집 임팩트)
+function ring(x, y, c, growth = 260) {
+  G.parts.push({ ring: 1, x, y, vx: 0, vy: 0, r: 10 * SC, life: 0.35, t: 0, c, grav: 0, growth: growth * SC });
+}
+// 대형 배너 (피버/스테이지/신기록 등 빅 모먼트)
+function showBanner(txt, c = '#ffd75e') {
+  G.banner = { txt, c, t: 0, life: 1.7 };
+}
 
 // ---------- 토스트 ----------
 function showToast(txt) {
@@ -351,10 +362,11 @@ function showToast(txt) {
 }
 
 // ---------- 장애물/아이템 정의 ----------
+// 히트박스는 시각보다 관대하게 (플랫포머 공정성 원칙)
 const OBS_DEF = {
-  rock:  { dw: 96,  hbx: 0.16, hby: 0.82 },
-  log:   { dw: 128, hbx: 0.12, hby: 0.80 },
-  plant: { dw: 88,  hbx: 0.20, hby: 0.85 },
+  rock:  { dw: 96,  hbx: 0.20, hby: 0.76 },
+  log:   { dw: 128, hbx: 0.18, hby: 0.74 },
+  plant: { dw: 88,  hbx: 0.24, hby: 0.79 },
 };
 function addObstacle(kind, x) {
   const def = OBS_DEF[kind];
@@ -399,50 +411,51 @@ const CHUNKS = [
       return 90 * SC;
   } },
   { id: 'hole', d: 2, fn(x) {
-      const w = (130 + Math.random() * 55) * SC + G.speed * 0.10;
+      const w = (130 + Math.random() * 55) * SC + G.speed * 0.08;
       G.holes.push({ x, w });
       if (Math.random() < 0.55) boneArc(x + w * 0.15, true);
       return w;
   } },
   { id: 'branch', d: 2, fn(x) { addBranch(x); return 200 * SC; } },
   { id: 'gold', d: 2, fn(x) { addPow('gold', x, groundY - 200 * SC); return 90 * SC; } },
-  { id: 'toucan', d: 3, fn(x) { addToucan(x + 120 * SC); return 160 * SC; } },
+  { id: 'toucan', d: 3, fn(x) { addToucan(x + 300 * SC); return 200 * SC; } },
   { id: 'double_obs', d: 3, fn(x) {
       const k1 = Math.random() < 0.5 ? 'rock' : 'plant';
       const k2 = Math.random() < 0.5 ? 'log' : 'rock';
       addObstacle(k1, x);
-      const gap = (210 + G.speed * 0.20) * SC;
+      const gap = 230 * SC + G.speed * 0.26;
       addObstacle(k2, x + gap);
       return gap + 160 * SC;
   } },
   { id: 'hole_rock', d: 3, fn(x) {
       const w = 140 * SC + G.speed * 0.08;
       G.holes.push({ x, w });
-      addObstacle('rock', x + w + (190 + G.speed * 0.16) * SC);
-      return w + (190 + G.speed * 0.16) * SC + 140 * SC;
+      const gap = 200 * SC + G.speed * 0.24;
+      addObstacle('rock', x + w + gap);
+      return w + gap + 140 * SC;
   } },
   { id: 'arc_hole', d: 3, fn(x) {
-      const w = (170 + Math.random() * 50) * SC + G.speed * 0.12;
+      const w = (160 + Math.random() * 50) * SC + G.speed * 0.10;
       G.holes.push({ x, w });
       boneArc(x - 30 * SC, true);
       return w + 40 * SC;
   } },
   { id: 'jump_slide', d: 4, fn(x) {
       addObstacle('rock', x);
-      const gap = (240 + G.speed * 0.30) * SC;
+      const gap = 300 * SC + G.speed * 0.40;
       addBranch(x + gap);
       return gap + 220 * SC;
   } },
   { id: 'slide_jump', d: 4, fn(x) {
       addBranch(x);
-      const gap = (250 + G.speed * 0.30) * SC;
+      const gap = 310 * SC + G.speed * 0.40;
       const w = 130 * SC + G.speed * 0.08;
       G.holes.push({ x: x + gap, w });
       return gap + w + 50 * SC;
   } },
   { id: 'double_hole', d: 4, fn(x) {
-      const w = 120 * SC + G.speed * 0.07;
-      const gap = (200 + G.speed * 0.22) * SC;
+      const w = 120 * SC + G.speed * 0.06;
+      const gap = 235 * SC + G.speed * 0.26;
       G.holes.push({ x, w });
       G.holes.push({ x: x + w + gap, w });
       boneArc(x + w + gap * 0.28, true);
@@ -450,11 +463,12 @@ const CHUNKS = [
   } },
   { id: 'toucan_rock', d: 4, fn(x) {
       addObstacle('rock', x);
-      addToucan(x + (330 + G.speed * 0.25) * SC);
-      return (330 + G.speed * 0.25) * SC + 180 * SC;
+      const gap = 390 * SC + G.speed * 0.30;
+      addToucan(x + gap);
+      return gap + 180 * SC;
   } },
   { id: 'triple', d: 5, fn(x) {
-      const gap = (215 + G.speed * 0.22) * SC;
+      const gap = 245 * SC + G.speed * 0.26;
       addObstacle('rock', x);
       addObstacle('plant', x + gap);
       addObstacle('log', x + gap * 2);
@@ -462,14 +476,14 @@ const CHUNKS = [
       return gap * 2 + 170 * SC;
   } },
   { id: 'long_hole', d: 5, fn(x) {
-      const w = (240 + Math.random() * 60) * SC + G.speed * 0.16;
+      const w = (220 + Math.random() * 55) * SC + G.speed * 0.13;
       G.holes.push({ x, w });
       boneArc(x + w * 0.1, true);
       return w + 60 * SC;
   } },
   { id: 'branch_tunnel', d: 5, fn(x) {
       addBranch(x);
-      const gap = (300 + G.speed * 0.26) * SC;
+      const gap = 340 * SC + G.speed * 0.32;
       addBranch(x + gap);
       return gap + 220 * SC;
   } },
@@ -481,7 +495,7 @@ const CHUNKS = [
   } },
 ];
 const CHUNK_MAP = {}; CHUNKS.forEach(c => CHUNK_MAP[c.id] = c);
-function bandFor(m) { return m < 300 ? 1 : m < 800 ? 2 : m < 1500 ? 3 : m < 2500 ? 4 : 5; }
+function bandFor(m) { return m < 350 ? 1 : m < 900 ? 2 : m < 1700 ? 3 : m < 2800 ? 4 : 5; }
 function spawnChunk() {
   const x = W + 80 * SC;
   let chunk;
@@ -509,7 +523,7 @@ function spawnChunk() {
   const w = chunk.fn(x);
   G.lastChunk = chunk.id;
   if (chunk.tag === 'pow') G.powCd = 5 + (Math.random() * 4 | 0); else G.powCd--;
-  const gap = G.speed * (0.50 + Math.random() * 0.42) + 150 * SC;
+  const gap = G.speed * (0.52 + Math.random() * 0.42) + 170 * SC;
   G.spawnPx = w + gap;
 }
 
@@ -520,7 +534,7 @@ function rectsHit(a, b) {
 function playerBox() {
   const p = G.player;
   if (p.sliding) return { x: p.x - p.w * 0.28, y: p.y - p.h * 0.38, w: p.w * 0.58, h: p.h * 0.34 };
-  return { x: p.x - p.w * 0.24, y: p.y - p.h * 0.72, w: p.w * 0.48, h: p.h * 0.68 };
+  return { x: p.x - p.w * 0.22, y: p.y - p.h * 0.72, w: p.w * 0.44, h: p.h * 0.68 };
 }
 function obstacleBoxes(o) {
   if (o.kind === 'branch') {
@@ -554,21 +568,28 @@ function hitObstacle() {
     pop(p.x, p.y - p.h * 1.1, '헬멧이 지켜줬다! ⛑️', '#ffd75e', true);
     return;
   }
-  p.invuln = 1.3;
+  p.invuln = 1.5;
   G.combo = 0;
+  G.hitCnt++;
   G.noHitDist = G.worldX;
-  G.tigerDist = Math.max(0, G.tigerDist - 30);
-  G.slowRecover = 1.0;
+  G.tigerDist = Math.max(0, G.tigerDist - 26);
+  G.slowRecover = 0.85;
   G.shake = 0.45; G.flash = 0.35;
+  G.hitStop = 0.09;
+  ring(p.x, p.y - p.h * 0.5, '255,120,80');
   sfx.hit(); vib(80);
   showToast('부딪혔다멍! 🐯 호랑이가 가까워진다!');
-  if (G.tigerDist <= 0) startCaught();
+  if (G.tigerDist <= 0) { G.deathBy = 'tiger'; startCaught(); }
 }
 function startCaught() {
   if (state !== ST.RUN) return;
   state = ST.CAUGHT;
   G.caughtT = 0;
   G.tiger.lunge = 1;
+  G.hitStop = 0.16; G.flash = 0.55; G.shake = 0.6;
+  const p = G.player;
+  ring(p.x, p.y - p.h * 0.5, '255,90,60');
+  sparkle(p.x, p.y - p.h * 0.5, 18, '255,150,90');
   sfx.caught(); vib([60, 40, 120]);
 }
 function offerRevive() {
@@ -600,8 +621,12 @@ function startFever() {
   G.feverT = 6.5;
   G.fever = 1;
   G.feverCnt++;
+  G.flash = 0.22;
+  const p = G.player;
+  ring(p.x, p.y - p.h * 0.5, '255,220,120', 420);
+  sparkle(p.x, p.y - p.h * 0.5, 20, '255,220,120');
+  showBanner('🌈 FEVER TIME!!');
   sfx.fever(); vib(40);
-  showToast('🌈 피버 타임!! 무적 질주다멍!!');
   if (G.feverCnt >= 3) unlock('fever3');
 }
 function collectPow(w) {
@@ -621,7 +646,7 @@ function collectPow(w) {
     G.combo += 5;
     G.comboMax = Math.max(G.comboMax, G.combo);
     G.score += 120;
-    if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 5 / 18);
+    if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 5 / 16);
     sfx.gold(); pop(w.x, w.y - 30 * SC, '💛 황금 뼈다귀 +5!', '#ffd75e', true);
   }
   sparkle(w.x, w.y, 16, w.kind === 'gold' ? '255,214,90' : '160,230,255');
@@ -652,8 +677,8 @@ function update(dt) {
   }
   if (state !== ST.RUN) return;
 
-  // 속도 (피버/부스터 배속)
-  const ramp = 7.5 * SC;
+  // 속도 (피버/부스터 배속) — 최고속 도달 ~1200m로 완만하게
+  const ramp = 4.2 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
   let target = G.baseSpeed;
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
@@ -669,14 +694,23 @@ function update(dt) {
   if (stg !== G.stage) {
     G.stagePrev = G.stage; G.stage = stg; G.stageFade = 0;
     sfx.stage();
-    showToast(stg === 1 ? '🌇 노을 정글에 들어섰다!' : stg === 2 ? '🌙 밤의 정글… 반딧불이 반짝!' : '🌞 아침 해가 떴다!');
+    showBanner(stg === 1 ? '🌇 노을 정글' : stg === 2 ? '🌙 밤의 정글' : '🌞 아침 정글', '#ffe9a8');
+    showToast(stg === 1 ? '해가 저물어 간다…' : stg === 2 ? '반딧불이 반짝반짝!' : '아침 해가 떴다!');
   }
   if (G.stageFade < 1) G.stageFade = Math.min(1, G.stageFade + dt * 0.8);
+
+  // 최고 기록 돌파 연출 (달리는 중 실시간)
+  if (!G.bestBroken && best > 0 && G.worldX > best) {
+    G.bestBroken = true;
+    showBanner('🏆 신기록 돌파!!');
+    ring(p.x, p.y - p.h * 0.5, '255,215,90', 420);
+    sfx.record(); vib([30, 30, 80]);
+  }
 
   // 마일스톤
   if (G.worldX >= G.nextMilestone) {
     G.nextMilestone += 500;
-    G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + 26 * SC);
+    G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + 18 * SC);
     G.tigerDist = Math.min(100, G.tigerDist + 6);
     sfx.power();
     showToast(`🏫 ${Math.floor(G.worldX)}m! 유치원이 가까워진다!`);
@@ -735,31 +769,45 @@ function update(dt) {
   // 플레이어 물리
   p.anim += dt * (8 + G.speed / (90 * SC));
   if (!p.onGround || p.falling) {
-    p.vy += 3000 * SC * dt;
+    p.vy += 2850 * SC * dt;
     p.y += p.vy * dt;
     if (!p.falling && p.vy > 0 && p.y >= groundY) {
       if (overHole(p.x)) {
         p.falling = true;
       } else {
-        p.y = groundY; p.vy = 0; p.onGround = true; p.jumps = 0; p.fastFall = false;
+        p.y = groundY; p.vy = 0; p.onGround = true; p.jumps = 0;
+        p.squash = p.fastFall ? 0.16 : 0.11;   // 착지 스쿼시 (내려찍기는 더 강하게)
+        if (p.fastFall) { G.shake = Math.max(G.shake, 0.18); dust(p.x, groundY, 10); }
+        p.fastFall = false;
         dust(p.x, groundY, 6);
       }
     }
-    if (p.falling && p.y - p.h > H + 40) { startCaught(); p.falling = false; G.caughtT = 0.7; }
+    if (p.falling && p.y - p.h > H + 40) { G.deathBy = 'hole'; startCaught(); p.falling = false; G.caughtT = 0.7; }
   } else {
     if (overHole(p.x)) { p.onGround = false; p.falling = true; p.sliding = false; p.vy = 120 * SC; sfx.hit(); }
   }
   if (p.invuln > 0) p.invuln -= dt;
+  if (p.squash > 0) p.squash -= dt;
+
+  // 배너 타이머
+  if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) G.banner = null; }
 
   // 오브젝트 이동
   for (const o of G.obstacles) {
     o.x -= dx;
-    if (o.kind === 'toucan') { o.x -= 185 * SC * dt; o.t += dt; }
+    if (o.kind === 'toucan') { o.x -= 105 * SC * dt; o.t += dt; }
   }
   for (const h of G.holes) h.x -= dx;
   for (const b of G.bones) { b.x -= dx; b.t += dt * 4; }
   for (const w of G.pows) { w.x -= dx; w.t += dt * 3; }
-  for (const s of G.signs) s.x -= dx;
+  for (const s of G.signs) {
+    s.x -= dx;
+    if (!s.passed && s.x < p.x) {   // 표지판 통과 — 나뭇잎 축포
+      s.passed = true;
+      sparkle(s.x, groundY - 110 * SC, 14, '140,220,90');
+      sparkle(s.x, groundY - 130 * SC, 8, '255,232,140');
+    }
+  }
   for (const t of G.hints) t.x -= dx;
   G.obstacles = G.obstacles.filter(o => o.x + o.dw > -80);
   G.holes = G.holes.filter(h => h.x + h.w > -60);
@@ -825,12 +873,14 @@ function update(dt) {
       const bonus = 15 + Math.min(40, G.combo * 2) + (G.feverT > 0 ? 15 : 0);
       G.score += bonus;
       sfx.collect();
+      ring(b.x, b.y, '255,240,180', 130);
       if (G.combo > 0 && G.combo % 10 === 0) {
         sfx.combo10();
+        sparkle(p.x, p.y - p.h * 0.7, 12, '255,200,90');
         pop(p.x, p.y - p.h * 1.2, `콤보 x${G.combo}!! 🔥`, '#ffb84d', true);
       }
       if (G.feverT <= 0) {
-        G.fever = Math.min(1, G.fever + 1 / 18);
+        G.fever = Math.min(1, G.fever + 1 / 16);
         if (G.fever >= 1) startFever();
       }
       if (G.bonesCnt === 30) unlock('bones30');
@@ -935,6 +985,7 @@ function draw() {
   drawPops();
   drawHints();
   drawSpeedLines();
+  drawBanner();
 
   ctx.restore();
 
@@ -1152,6 +1203,15 @@ function drawPlayer() {
     ctx.fill();
     ctx.restore();
   }
+  // 스쿼시 & 스트레치 (착지 눌림 / 상승 늘어남) — 발 기준 앵커
+  let sx = 1, sy = 1;
+  if (p.squash > 0) {
+    const k = Math.min(1, p.squash / 0.11);
+    sx = 1 + 0.15 * k; sy = 1 - 0.20 * k;
+  } else if (!p.onGround && p.vy < -260 * SC) {
+    sx = 0.94; sy = 1.08;
+  }
+  if (sx !== 1 || sy !== 1) ctx.scale(sx, sy);
   // 피버/부스터 오라
   if (G.feverT > 0 || G.boostT > 0) {
     const hue = (performance.now() * 0.35) % 360;
@@ -1201,6 +1261,11 @@ function drawTiger() {
   ctx.beginPath();
   ctx.ellipse(0, 6 * SC, dw * 0.4, 11 * SC, 0, 0, Math.PI * 2);
   ctx.fill();
+  // 근접 시 위협 글로우
+  if (state === ST.RUN && G.tigerDist < 16) {
+    ctx.shadowColor = 'rgba(255,50,20,0.85)';
+    ctx.shadowBlur = (18 + Math.sin(performance.now() * 0.012) * 8) * SC;
+  }
   ctx.drawImage(im, -dw / 2, -dh * 0.96, dw, dh);
   ctx.restore();
 }
@@ -1208,7 +1273,13 @@ function drawTiger() {
 function drawParts() {
   for (const pa of G.parts) {
     const a = 1 - pa.t / pa.life;
-    if (pa.glow) {
+    if (pa.ring) {
+      ctx.strokeStyle = `rgba(${pa.c},${a * 0.85})`;
+      ctx.lineWidth = 3.5 * SC * a + 1;
+      ctx.beginPath();
+      ctx.arc(pa.x, pa.y, pa.r + pa.growth * pa.t, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (pa.glow) {
       ctx.save();
       ctx.shadowColor = `rgba(${pa.c},0.9)`;
       ctx.shadowBlur = 8 * SC;
@@ -1244,7 +1315,6 @@ function drawPops() {
 
 function drawHints() {
   for (const t of G.hints) {
-    const w = ctx.measureText(t.txt).width;
     ctx.font = `800 ${17 * SC}px 'Apple SD Gothic Neo','Malgun Gothic',sans-serif`;
     const tw = ctx.measureText(t.txt).width + 28 * SC;
     ctx.fillStyle = 'rgba(8,26,14,0.85)';
@@ -1266,6 +1336,34 @@ function drawHints() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(t.txt, t.x, t.y + 1);
   }
+}
+
+function drawBanner() {
+  const b = G.banner;
+  if (!b) return;
+  // 등장: 오버슈트 팝 / 퇴장: 축소 페이드
+  let k;
+  if (b.t < 0.28) { const u = b.t / 0.28; k = 1 + 0.35 * Math.sin(u * Math.PI) * (1 - u); k *= u < 0.5 ? u * 2 : 1; }
+  else if (b.t > b.life - 0.3) k = Math.max(0, (b.life - b.t) / 0.3);
+  else k = 1;
+  const fs = Math.min(46 * SC, W * 0.09);
+  ctx.save();
+  ctx.translate(W / 2, H * 0.28);
+  ctx.scale(Math.max(0.01, k), Math.max(0.01, k));
+  ctx.globalAlpha = Math.min(1, k);
+  ctx.font = `900 ${fs}px 'Apple SD Gothic Neo','Malgun Gothic',sans-serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = fs * 0.22;
+  ctx.strokeStyle = 'rgba(20,14,4,0.85)';
+  ctx.strokeText(b.txt, 0, 0);
+  const gr = ctx.createLinearGradient(0, -fs * 0.6, 0, fs * 0.6);
+  gr.addColorStop(0, '#fff6d8');
+  gr.addColorStop(0.5, b.c);
+  gr.addColorStop(1, '#ff8a3d');
+  ctx.fillStyle = gr;
+  ctx.fillText(b.txt, 0, 0);
+  ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
 function drawSpeedLines() {
@@ -1291,6 +1389,12 @@ function loop(t) {
   dt = Math.min(0.034, dt);
   lastT = t;
   if (state === ST.PAUSE) return;
+  // 히트스톱: 짧은 프레임 정지로 타격감 강조
+  if (G.hitStop > 0 && (state === ST.RUN || state === ST.CAUGHT)) {
+    G.hitStop -= dt;
+    if (assetsReady) draw();
+    return;
+  }
   if (state === ST.RUN || state === ST.CAUGHT || state === ST.REVIVE) update(dt);
   if (assetsReady && state !== ST.MENU && state !== ST.INTRO) draw();
 }
@@ -1496,6 +1600,44 @@ if (location.search.indexOf('test') >= 0) {
     chunk(id) { CHUNK_MAP[id].fn(W + 80 * SC); },
     revive: doRevive,
     resetSave() { localStorage.clear(); },
+    // 난이도 계측용 자동 플레이 봇 (reactSec: 반응 속도 — 사람 평균 ~0.42s)
+    botRun(reactSec = 0.42, maxMs = 240000) {
+      this.go();
+      const p = G.player;
+      const n = Math.round(maxMs / 16);
+      for (let i = 0; i < n; i++) {
+        if (state === ST.REVIVE) { ui.revive.classList.add('hidden'); endGame(); }
+        if (state !== ST.RUN && state !== ST.CAUGHT) break;
+        if (state === ST.RUN) {
+          const react = G.speed * reactSec + 40 * SC;
+          let jumpD = 1e9, slideD = 1e9;
+          for (const o of G.obstacles) {
+            if (o.hitDone) continue;
+            const d = o.x - (p.x + p.w * 0.3);
+            if (d < -60 * SC) continue;
+            if (o.kind === 'branch' || o.kind === 'toucan') slideD = Math.min(slideD, d);
+            else jumpD = Math.min(jumpD, d);
+          }
+          for (const h of G.holes) {
+            const d = h.x - p.x;
+            if (d > -h.w) jumpD = Math.min(jumpD, Math.max(0, d));
+          }
+          const wantSlide = slideD < react * 0.85 && slideD > -80 * SC;
+          if (wantSlide && !input.keySlide) { input.keySlide = true; slidePress(); }
+          else if (!wantSlide) input.keySlide = false;
+          if (!wantSlide && jumpD < G.speed * 0.22 + 24 * SC && p.onGround) jumpInput();
+          // 사람처럼: 하강 중 아직 장애물 위를 못 벗어났으면 2단 점프
+          if (!p.onGround && p.vy > 150 * SC && p.jumps === 1 &&
+              ((jumpD < 1e8 && jumpD > -70 * SC) || overHole(p.x + p.w * 0.8))) jumpInput();
+        }
+        update(0.016);
+      }
+      input.keySlide = false;
+      const res = { m: Math.floor(G.worldX), deathBy: G.deathBy || 'none', hits: G.hitCnt, bones: G.bonesCnt, fevers: G.feverCnt, state };
+      if (state === ST.OVER) return res;
+      endGame();
+      return res;
+    },
   };
 }
 

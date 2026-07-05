@@ -191,7 +191,7 @@ html, body {
   to { filter: brightness(1.5); }
 }
 #effects {
-  position: absolute; left: 14px; top: 108px;
+  position: absolute; left: 14px; top: 122px;
   font-size: 14px; padding: 6px 12px; min-width: 0;
 }
 #pauseBtn {
