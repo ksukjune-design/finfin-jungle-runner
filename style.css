@@ -150,13 +150,34 @@ html, body {
   flex: 1; height: 10px; border-radius: 999px;
   background: rgba(8,26,14,.6);
   border: 1px solid rgba(255,255,255,.2);
-  overflow: hidden;
+  position: relative;
 }
 #tigerbar-fill {
   height: 100%; width: 55%;
-  background: linear-gradient(90deg, #ff5c39, #ffb84d);
+  background: linear-gradient(90deg, #7dd87d, #ffb84d);
   border-radius: 999px;
-  transition: width .25s ease-out;
+  transition: width .25s ease-out, background .3s;
+}
+/* 추격 트랙: 호랑이 아이콘이 바 위를 실제로 이동 */
+#tigerIcon {
+  position: absolute; top: -8px; left: 0;
+  font-size: 19px;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.6));
+  transition: left .25s ease-out;
+  transform-origin: 50% 60%;
+}
+.t-warn #tigerbar-fill { background: linear-gradient(90deg, #ffb84d, #ff8a3d); }
+.t-warn #tigerIcon { animation: tigerShake .5s ease-in-out infinite; }
+.t-danger #tigerbar { border-color: rgba(255,90,50,.9); box-shadow: 0 0 12px rgba(255,60,30,.65); }
+.t-danger #tigerbar-fill { background: linear-gradient(90deg, #ff5c39, #ff2e1a); animation: dangerPulse .45s linear infinite alternate; }
+.t-danger #tigerIcon { animation: tigerShake .22s ease-in-out infinite; font-size: 22px; top: -10px; }
+@keyframes tigerShake {
+  0%, 100% { transform: rotate(-8deg) scale(1); }
+  50% { transform: rotate(8deg) scale(1.12); }
+}
+@keyframes dangerPulse {
+  from { filter: brightness(1); }
+  to { filter: brightness(1.6); }
 }
 .combo-pill {
   background: rgba(120,50,8,.72); color: #ffd75e;

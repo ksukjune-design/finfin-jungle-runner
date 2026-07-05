@@ -13,7 +13,8 @@ const ctx = canvas.getContext('2d');
 const $ = id => document.getElementById(id);
 const ui = {
   hud: $('hud'), score: $('score'), bones: $('bones'), combo: $('combo'),
-  tigerFill: $('tigerbar-fill'), feverFill: $('feverbar-fill'),
+  tigerFill: $('tigerbar-fill'), tigerIcon: $('tigerIcon'), tigerWrap: $('tigerbar-wrap'),
+  feverFill: $('feverbar-fill'),
   feverWrap: $('feverbar-wrap'), effects: $('effects'), toast: $('toast'),
   pauseBtn: $('pauseBtn'), zones: $('zones'),
   start: $('start'), startBtn: $('startBtn'), posterVideo: $('posterVideo'),
@@ -239,6 +240,9 @@ const sfx = {
   fever()   { [523, 659, 784, 1046, 1318].forEach((f, i) => blip(f, 0.14, 'sine', 0.14, 0, i * 0.07)); },
   feverEnd(){ blip(880, 0.2, 'sine', 0.10, -300); },
   roar()    { blip(90, 0.55, 'sawtooth', 0.20, +40); swish(0.5, 0.5, 200, 90); },
+  heart()   { blip(64, 0.12, 'sine', 0.20, -14); blip(58, 0.10, 'sine', 0.13, -10, 0.14); },
+  swipeAtk(){ swish(0.28, 0.55, 1400, 300); blip(140, 0.16, 'sawtooth', 0.10, -60); },
+  relief()  { blip(520, 0.12, 'sine', 0.12, +140); blip(780, 0.16, 'sine', 0.12, 0, 0.1); },
   revive()  { blip(440, 0.12, 'sine', 0.14); blip(660, 0.2, 'sine', 0.14, 0, 0.12); },
   record()  { [659, 784, 1046, 1318, 1568].forEach((f, i) => blip(f, 0.16, 'square', 0.10, 0, i * 0.09)); },
   stage()   { blip(784, 0.12, 'sine', 0.12); blip(988, 0.16, 'sine', 0.12, 0, 0.1); },
@@ -393,6 +397,10 @@ function camPunch(z, dur = 0.55) { cam.punchZ = z; cam.punchT = dur; cam.punchDu
 function camTick(dt) {
   // 기본 줌: 속도가 붙을수록 살짝 와이드 (질주감)
   let target = G.maxSpeed ? 1.02 - (G.speed / G.maxSpeed) * 0.07 : 1;
+  // 위기 긴장 줌: 호랑이 초근접 시 미세하게 조여오는 스로브
+  if (state === ST.RUN && G.tigerDist < 12) {
+    target += 0.03 + Math.sin(performance.now() * 0.009) * 0.014;
+  }
   if (cam.punchT > 0) {
     cam.punchT -= dt;
     const k = Math.max(0, cam.punchT / cam.punchDur);
@@ -1329,14 +1337,46 @@ function update(dt) {
   // 호랑이 게이지 회복
   G.tigerDist = Math.min(100, G.tigerDist + (G.perks.tigerRegen ? 2.3 : 1.5) * dt);
 
-  // 호랑이 으르렁 경고
+  // 호랑이 으르렁 경고 (근접할수록 잦게, 대사 로테이션)
   if (G.tigerDist < 25) {
     G.roarT -= dt;
     if (G.roarT <= 0) {
-      G.roarT = 2.8;
+      G.roarT = G.tigerDist < 12 ? 2.0 : 2.8;
       sfx.roar(); vib(90);
-      pop(p.x - p.w * 1.3, groundY - p.h * 1.2, '으르렁!! 🐯', '#ff7a5c', true);
+      const lines = ['으르렁!! 🐯', '바로 뒤다!!', '숨결이 느껴진다…!', '어흥!! 잡힌다!!'];
+      pop(p.x - p.w * 1.3, groundY - p.h * 1.2, lines[(Math.random() * lines.length) | 0], '#ff7a5c', true);
     }
+  }
+
+  // 심장박동 (긴박 오디오 레이어 — 근접할수록 빨라짐)
+  if (G.tigerDist < 45) {
+    G.heartT = (G.heartT || 0) - dt;
+    if (G.heartT <= 0) {
+      G.heartT = G.tigerDist < 12 ? 0.42 : G.tigerDist < 25 ? 0.62 : 0.95;
+      sfx.heart();
+      if (G.tigerDist < 12) vib(18);
+    }
+  }
+
+  // 호랑이 발톱 스와이프 (초근접 위협 — 시각 협박, 실피해 없음)
+  if (G.tigerDist < 12) {
+    G.swipeT = (G.swipeT === undefined ? 1.2 : G.swipeT) - dt;
+    if (G.swipeT <= 0) {
+      G.swipeT = 2.1 + Math.random() * 0.9;
+      G.tiger.swipe = 0.5;
+      sfx.swipeAtk(); vib([30, 30, 50]);
+      G.shake = Math.max(G.shake, 0.22);
+    }
+  } else G.swipeT = 1.2;
+  if (G.tiger.swipe > 0) G.tiger.swipe -= dt;
+
+  // 위기 탈출 릴리프 모먼트
+  if (G.tigerDist < 18) G.wasClose = true;
+  else if (G.wasClose && G.tigerDist > 45) {
+    G.wasClose = false;
+    sfx.relief();
+    pop(p.x, p.y - p.h * 1.25, '따돌렸다!! 😮‍💨', '#9fffb0', true);
+    showToast('휴… 호랑이가 멀어졌다!');
   }
 
   // 로우라이더: 머리 위 장애물 접근 시 자동 숙이기
@@ -1568,6 +1608,20 @@ function update(dt) {
   // 호랑이 애니
   G.tiger.anim += dt * (10 + G.speed / (60 * SC));
 
+  // 근접 위협 파티클 (거친 입김 + 흙먼지 튀김)
+  if (G.tigerDist < 26) {
+    const dwT = p.w * 1.9;
+    const txT = p.x - ((G.tigerDist / 100) * W * 0.92 + dwT * 0.15);
+    if (Math.random() < dt * 6) {
+      G.parts.push({
+        x: txT + dwT * 0.30, y: groundY - dwT * 0.32,
+        vx: (20 + Math.random() * 40) * SC, vy: -(8 + Math.random() * 22) * SC,
+        r: (5 + Math.random() * 7) * SC, life: 0.65, t: 0, c: '228,230,235', grav: 0,
+      });
+    }
+    if (Math.random() < dt * 16) dust(txT - dwT * 0.15, groundY, 1);
+  }
+
   // 파티클/팝업
   if (p.onGround && !p.sliding && Math.random() < dt * 18) dust(p.x - p.w * 0.3, groundY, 1);
   if (p.sliding && Math.random() < dt * 30) dust(p.x + p.w * 0.25, groundY, 1);
@@ -1635,7 +1689,18 @@ function updateHUD(force) {
   const b = '🦴 ' + G.bonesCnt;
   if (force || hudCache.b !== b) { ui.bones.textContent = b; hudCache.b = b; }
   const tw = Math.round(100 - G.tigerDist) + '%';
-  if (force || hudCache.tw !== tw) { ui.tigerFill.style.width = tw; hudCache.tw = tw; }
+  if (force || hudCache.tw !== tw) {
+    ui.tigerFill.style.width = tw;
+    // 추격 트랙: 호랑이 아이콘이 개(오른쪽 끝)를 향해 이동
+    ui.tigerIcon.style.left = `calc(${Math.round(100 - G.tigerDist)}% - 10px)`;
+    hudCache.tw = tw;
+  }
+  const tLv = G.tigerDist < 22 ? 2 : G.tigerDist < 45 ? 1 : 0;
+  if (force || hudCache.tLv !== tLv) {
+    ui.tigerWrap.classList.toggle('t-warn', tLv === 1);
+    ui.tigerWrap.classList.toggle('t-danger', tLv === 2);
+    hudCache.tLv = tLv;
+  }
   const jw = Math.min(100, G.worldX / TOTAL_M * 100).toFixed(1) + '%';
   if (force || hudCache.jw !== jw) { ui.journeyFill.style.width = jw; hudCache.jw = jw; }
   const fv = Math.round(G.fever * 100) + '%';
@@ -2157,12 +2222,17 @@ function drawTiger() {
   } else {
     gap = (G.tigerDist / 100) * W * 0.92 + dw * 0.15;
   }
-  const tx = p.x - gap - dw * 0.5;
+  // 발톱 스와이프 런지 (앞으로 확 달려드는 위협 동작)
+  const lungeF = G.tiger.swipe > 0
+    ? Math.sin(Math.min(1, (0.5 - G.tiger.swipe) / 0.5) * Math.PI) : 0;
+  const tx = p.x - gap - dw * 0.5 + lungeF * 64 * SC;
   if (tx + dw < -30) return;
-  const bob = Math.sin(G.tiger.anim * 0.9) * 5 * SC;
+  // 근접할수록 야성적으로 (바운스 증폭)
+  const close = Math.max(0, (30 - G.tigerDist) / 30);
+  const bob = Math.sin(G.tiger.anim * 0.9) * 5 * SC * (1 + close * 1.3);
   ctx.save();
   ctx.translate(tx + dw / 2, groundY + bob - 2 * SC);
-  ctx.rotate(Math.sin(G.tiger.anim * 0.9) * 0.035); // 질주 스웨이
+  ctx.rotate(Math.sin(G.tiger.anim * 0.9) * 0.035 + lungeF * 0.10); // 스웨이 + 런지 틸트
   ctx.fillStyle = 'rgba(0,0,0,0.3)';
   ctx.beginPath();
   ctx.ellipse(0, 6 * SC, dw * 0.4, 11 * SC, 0, 0, Math.PI * 2);
@@ -2173,6 +2243,18 @@ function drawTiger() {
     ctx.shadowBlur = (18 + Math.sin(performance.now() * 0.012) * 8) * SC;
   }
   ctx.drawImage(im, -dw / 2, -dh * 0.96, dw, dh);
+  // 클로 슬래시 (스와이프 순간 하얀 발톱 궤적 3줄)
+  if (lungeF > 0.08) {
+    ctx.strokeStyle = `rgba(255,255,255,${0.8 * lungeF})`;
+    ctx.lineWidth = 3.5 * SC;
+    ctx.lineCap = 'round';
+    for (let ci = 0; ci < 3; ci++) {
+      ctx.beginPath();
+      ctx.arc(dw * 0.40, -dh * 0.40, (24 + ci * 9) * SC, -0.95, 0.45);
+      ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+  }
   ctx.restore();
 }
 
