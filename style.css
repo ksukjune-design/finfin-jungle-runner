@@ -312,6 +312,72 @@ html, body {
 .ach-txt small { color: rgba(255,255,255,.65); font-size: 12px; margin-top: 1px; }
 .ach-check { color: #7dff9e; font-weight: 900; font-size: 17px; }
 
+/* ---------- 여정 진행 바 ---------- */
+#journey {
+  position: absolute; left: 10px; right: 34px; top: -6px;
+  height: 5px; border-radius: 999px;
+  background: rgba(8,26,14,.55);
+  border: 1px solid rgba(255,255,255,.15);
+}
+#journey-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #7dd87d, #ffd75e);
+  border-radius: 999px;
+  transition: width .4s linear;
+}
+#journey-flag {
+  position: absolute; right: -26px; top: -7px; font-size: 14px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.6));
+}
+
+/* ---------- 완주 엔딩 ---------- */
+#ending { background: linear-gradient(180deg, #2a6b4f, #0d2416); }
+.end-shade {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(circle at 22% 22%, rgba(255,215,94,.18), transparent 42%),
+    radial-gradient(circle at 78% 30%, rgba(255,140,200,.15), transparent 40%),
+    radial-gradient(circle at 50% 80%, rgba(120,220,255,.12), transparent 45%);
+}
+.end-title { color: #fff; font-size: 34px; font-weight: 900; text-shadow: 0 4px 16px rgba(0,0,0,.6); animation: recordBounce .8s ease-in-out infinite alternate; }
+.end-msg { color: #eaffe9; font-size: 14px; font-weight: 600; line-height: 1.6; text-align: center; margin-top: 10px; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+#ending .go-score { font-size: 40px; }
+#endRestartBtn {
+  font-family: inherit;
+  background: linear-gradient(180deg, #ffb84d, #f79422);
+  color: #4a2400; font-size: 20px; font-weight: 900;
+  border: none; border-radius: 999px;
+  padding: 16px 44px; cursor: pointer;
+  box-shadow: 0 6px 0 #c96f0a, 0 14px 30px rgba(0,0,0,.45);
+  margin-top: auto;
+}
+#endRestartBtn:active { transform: translateY(4px); box-shadow: 0 2px 0 #c96f0a; }
+#contBtn { margin-top: 10px; }
+
+/* ---------- 스테이지 클리어 헤더 ---------- */
+#clearHead { display: flex; flex-direction: column; align-items: center; width: 100%; margin-bottom: 10px; }
+#clearHead h3 {
+  background: linear-gradient(90deg, #ffd75e, #ff8a3d, #ff5ecb, #ffd75e);
+  background-size: 300% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 24px; font-weight: 900; margin-bottom: 8px;
+  animation: recordShine 1.4s linear infinite;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.5));
+}
+#clearDots { display: flex; gap: 5px; margin-bottom: 8px; }
+.dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: rgba(255,255,255,.15);
+  border: 1px solid rgba(255,255,255,.3);
+}
+.dot.on { background: #ffd75e; border-color: #ffd75e; box-shadow: 0 0 6px rgba(255,215,94,.8); }
+.dot.cur { background: rgba(255,215,94,.35); border-color: #ffd75e; animation: btnPulse 1s ease-in-out infinite; }
+#clearNext { color: #dff5e2; font-size: 13.5px; font-weight: 700; }
+#clearNext b { color: #ffd75e; }
+.clear-mode .panel, .overlay.clear-mode .panel { border-color: #ffd75e; box-shadow: 0 0 34px rgba(255,205,80,.28), 0 18px 50px rgba(0,0,0,.5); }
+.clear-mode .perk-card { border-color: rgba(255,215,94,.65); }
+
 /* ---------- 카툰 이벤트 (약올리기 + 퍼크) ---------- */
 .event-panel { max-width: min(92vw, 460px); padding: 20px 22px; }
 .gag-row {
@@ -501,6 +567,13 @@ html, body {
   .ach-panel { max-height: 88vh; }
   #achList { max-height: 46vh; }
   .zone { padding-bottom: 8vh; }
+  .end-title { font-size: 24px; }
+  .end-msg { font-size: 12px; margin-top: 6px; }
+  #endRestartBtn { font-size: 16px; padding: 11px 34px; }
+  #clearHead h3 { font-size: 18px; margin-bottom: 5px; }
+  #clearDots { margin-bottom: 5px; }
+  .dot { width: 9px; height: 9px; }
+  #clearNext { font-size: 11.5px; }
   .gag-face { width: 44px; height: 44px; }
   .bubble { font-size: 12.5px; padding: 7px 11px; }
   .event-sub { margin: 4px 0 6px; font-size: 11.5px; }

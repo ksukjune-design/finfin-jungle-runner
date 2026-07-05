@@ -7,7 +7,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0d2416">
 <title>핀핀 정글 등원 대작전</title>
-<link rel="stylesheet" href="style.css?v=5">
+<link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div id="app">
@@ -17,6 +17,7 @@
 
     <!-- HUD -->
     <div id="hud" class="hidden">
+      <div id="journey"><div id="journey-fill"></div><span id="journey-flag">🏫</span></div>
       <div class="hud-row">
         <div id="score" class="pill">0m</div>
         <div id="combo" class="pill combo-pill hidden"></div>
@@ -59,6 +60,7 @@
         <p class="subtitle">등원은 재밌쟁! 🐕 페달 없이 씽씽~<br>호랑이 🐯 보다 빨리 유치원까지 달려라!</p>
         <p id="titleMeta"></p>
         <button id="startBtn">등원 시작!</button>
+        <button id="contBtn" class="ghost hidden">🚩 이어 등원</button>
         <div class="title-row">
           <button id="garageBtn" class="ghost">🚲 바이크 차고</button>
           <button id="achBtn" class="ghost">🏅 도전과제</button>
@@ -90,9 +92,14 @@
       </div>
     </div>
 
-    <!-- 카툰 약올리기 이벤트 + 퍼크 선택 -->
+    <!-- 카툰 약올리기 이벤트 + 퍼크 선택 (스테이지 클리어 시 헤더 표시) -->
     <div id="event" class="overlay hidden">
       <div class="panel event-panel">
+        <div id="clearHead" class="hidden">
+          <h3 id="clearTitle">🎉 STAGE 1 클리어!</h3>
+          <div id="clearDots"></div>
+          <p id="clearNext"></p>
+        </div>
         <div class="gag-row">
           <img class="gag-face" src="assets/sprites/face_shiba.png" alt="시바">
           <div class="bubble bubble-s"><span id="gagShiba"></span></div>
@@ -149,7 +156,30 @@
       </div>
     </div>
 
+    <!-- 완주 엔딩 -->
+    <div id="ending" class="screen hidden">
+      <div class="end-shade"></div>
+      <div class="go-content">
+        <h2 class="end-title">🏫 유치원 도착!! 🎉</h2>
+        <div class="go-new" style="display:block">10,000m 완주!!</div>
+        <div class="go-stats">
+          <div class="go-score">등원 성공</div>
+          <div class="go-grid">
+            <span>🦴 <b id="endBones">0</b></span>
+            <span>🔥 콤보 <b id="endCombo">0</b></span>
+            <span>🌈 피버 <b id="endFever">0</b></span>
+          </div>
+          <div id="endAch" class="go-ach hidden"></div>
+        </div>
+        <p class="end-msg">등원은 재밌쟁! 🐕 호랑이도 결국 친구가 되고 싶었던 거래요.<br>내일도 핀핀 밸런스바이크와 함께 씽씽~ 🚲</p>
+        <button id="endRestartBtn">처음부터 다시 등원 🚲</button>
+        <div class="go-row">
+          <button id="endShareBtn" class="ghost">📣 완주 자랑하기</button>
+        </div>
+      </div>
+    </div>
+
   </div>
-  <script src="game.js?v=5"></script>
+  <script src="game.js?v=6"></script>
 </body>
 </html>

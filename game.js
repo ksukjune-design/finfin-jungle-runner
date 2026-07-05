@@ -29,6 +29,8 @@ const ui = {
   achPanel: $('achPanel'), achList: $('achList'), achClose: $('achClose'),
   event: $('event'), garage: $('garage'), garageBtn: $('garageBtn'),
   bikeList: $('bikeList'), garageClose: $('garageClose'),
+  ending: $('ending'), endRestartBtn: $('endRestartBtn'), endShareBtn: $('endShareBtn'),
+  contBtn: $('contBtn'), journeyFill: $('journey-fill'),
 };
 
 // ---------- 저장 ----------
@@ -72,7 +74,40 @@ const IMG_SRC = {
   bg:    'assets/sprites/bg_jungle.jpg',
   bgSunset:'assets/sprites/bg_sunset.jpg',
   bgNight:'assets/sprites/bg_night.jpg',
+  bgRiver:'assets/sprites/bg_river.jpg',
+  bgBeach:'assets/sprites/bg_beach.jpg',
+  bgBamboo:'assets/sprites/bg_bamboo.jpg',
+  bgVillage:'assets/sprites/bg_village.jpg',
+  bgCanyon:'assets/sprites/bg_canyon.jpg',
+  bgCity:'assets/sprites/bg_city.jpg',
+  bgKinder:'assets/sprites/bg_kinder.jpg',
 };
+
+// ---------- 10 스테이지 여정 (등원길: 정글 → 유치원) ----------
+const STAGE_LEN = 1000;          // 스테이지당 미터
+const TOTAL_M = 10000;           // 완주 거리 (10 스테이지)
+const STAGES = [
+  { name: '아침 정글',   icon: '🌿', bg: 'bg',        tint: null,                      amb: 'leaf',
+    set: ['rock','log','plant','branch','snake','bones_line','bones_arc','pow','gold','hole','double_obs','snake_branch','jump_slide'] },
+  { name: '폭포 강가',   icon: '💧', bg: 'bgRiver',   tint: 'rgba(120,200,255,0.07)',  amb: 'mist',
+    set: ['log','hole','mud','toucan','bones_arc','bones_line','pow','gold','arc_hole','mud_rock','slide_jump','double_hole','long_hole'] },
+  { name: '반짝 해변',   icon: '🏖️', bg: 'bgBeach',   tint: 'rgba(255,230,150,0.08)',  amb: 'mist',
+    set: ['rock','boulder','hole','mud','bees','bones_line','bones_arc','pow','gold','hole_rock','double_obs','bees_rock','long_hole'] },
+  { name: '대나무 숲',   icon: '🎋', bg: 'bgBamboo',  tint: 'rgba(120,255,140,0.07)',  amb: 'leaf',
+    set: ['branch','snake','plant','wisp','bones_line','bones_arc','pow','gold','branch_tunnel','snake_branch','jump_slide','double_obs'] },
+  { name: '시골 마을',   icon: '🏡', bg: 'bgVillage', tint: null,                      amb: 'none',
+    set: ['mud','log','plant','monkey','rock','bones_line','bones_arc','pow','gold','mud_rock','double_obs','hole','toucan_rock'] },
+  { name: '노을 들판',   icon: '🌇', bg: 'bgSunset',  tint: 'rgba(255,140,60,0.10)',   amb: 'pollen',
+    set: ['bees','boulder','snake','hole','bones_arc','bones_line','pow','gold','bees_rock','boulder_hole','arc_hole','double_hole'] },
+  { name: '반딧불 숲',   icon: '🌙', bg: 'bgNight',   tint: 'rgba(30,50,140,0.17)',    amb: 'glow',
+    set: ['wisp','branch','toucan','hole','bones_arc','bones_line','pow','gold','branch_tunnel','slide_jump','long_hole','jump_slide'] },
+  { name: '붉은 협곡',   icon: '🏜️', bg: 'bgCanyon',  tint: 'rgba(255,120,50,0.09)',   amb: 'pollen',
+    set: ['boulder','rock','hole','snake','bones_line','bones_arc','pow','gold','boulder_hole','hole_rock','double_hole','triple','long_hole'] },
+  { name: '도시 거리',   icon: '🏙️', bg: 'bgCity',    tint: null,                      amb: 'none',
+    set: ['rock','log','toucan','boulder','double_obs','bones_line','bones_arc','pow','gold','toucan_rock','triple','jump_slide','hole'] },
+  { name: '유치원 길',   icon: '🏫', bg: 'bgKinder',  tint: 'rgba(255,190,220,0.07)',  amb: 'petal',
+    set: ['bones_line','bones_arc','pow','gold','rock','plant','mud','double_obs'] },
+];
 const img = {};
 let assetsReady = false;
 function loadAssets() {
@@ -213,6 +248,99 @@ const sfx = {
 };
 function vib(p) { if (!muted && navigator.vibrate) { try { navigator.vibrate(p); } catch (e) {} } }
 
+// ---------- BGM (프로시저럴 칩튠 — 스테이지별 10곡) ----------
+// 각 곡: bpm, 파형, 스케일(midi), bass/lead 16스텝(스케일 인덱스, -1=쉼), hat 16스텝
+const MUSIC = [
+  { bpm: 128, wave: 'square',   scale: [60, 62, 64, 67, 69],          // 1 정글: 통통 튀는 정글 그루브
+    bass: [0,-1,0,-1, 3,-1,0,-1, 0,-1,0,-1, 4,-1,3,-1],
+    lead: [4,-1,2,4, -1,7,-1,4, 2,-1,0,2, -1,4,2,0],
+    hat:  [1,0,1,0, 1,0,1,1, 1,0,1,0, 1,0,1,1] },
+  { bpm: 100, wave: 'triangle', scale: [55, 57, 59, 60, 62, 64, 66],  // 2 폭포강: 흐르는 물결
+    bass: [0,-1,-1,4, -1,-1,0,-1, 3,-1,-1,5, -1,-1,3,-1],
+    lead: [7,6,5,-1, 4,-1,2,-1, 5,4,3,-1, 2,-1,4,-1],
+    hat:  [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0] },
+  { bpm: 118, wave: 'square',   scale: [53, 55, 57, 60, 62],          // 3 해변: 칼립소 오프비트
+    bass: [0,-1,-1,0, -1,3,-1,-1, 0,-1,-1,0, -1,4,-1,3],
+    lead: [-1,4,-1,5, -1,4,-1,2, -1,5,-1,7, -1,5,4,2],
+    hat:  [0,1,0,1, 0,1,0,1, 0,1,0,1, 0,1,1,1] },
+  { bpm: 108, wave: 'triangle', scale: [50, 52, 55, 57, 60],          // 4 대나무숲: 동양풍 펜타토닉
+    bass: [0,-1,-1,-1, 2,-1,-1,-1, 0,-1,-1,-1, 3,-1,2,-1],
+    lead: [4,-1,5,4, 2,-1,-1,4, 5,-1,7,5, 4,2,-1,-1],
+    hat:  [1,0,0,1, 0,0,1,0, 1,0,0,1, 0,0,1,0] },
+  { bpm: 122, wave: 'square',   scale: [60, 62, 64, 65, 67, 69, 71],  // 5 시골마을: 유쾌한 포크
+    bass: [0,-1,4,-1, 0,-1,4,-1, 3,-1,5,-1, 4,-1,4,-1],
+    lead: [0,2,4,-1, 4,5,4,2, 0,2,4,-1, 2,1,0,-1],
+    hat:  [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,1,0,1] },
+  { bpm: 92,  wave: 'triangle', scale: [57, 60, 62, 64, 67],          // 6 노을들판: 따뜻하고 느긋
+    bass: [0,-1,-1,-1, -1,-1,3,-1, 2,-1,-1,-1, -1,-1,4,-1],
+    lead: [4,-1,-1,5, -1,4,-1,-1, 2,-1,-1,4, -1,2,0,-1],
+    hat:  [0,0,1,0, 0,0,0,0, 0,0,1,0, 0,0,0,0] },
+  { bpm: 100, wave: 'sine',     scale: [52, 55, 57, 59, 62, 64],      // 7 반딧불숲: 신비로운 밤
+    bass: [0,-1,-1,-1, 2,-1,-1,-1, 1,-1,-1,-1, 3,-1,-1,-1],
+    lead: [-1,5,-1,7, -1,-1,5,-1, -1,4,-1,5, -1,-1,-1,-1],
+    hat:  [0,0,0,1, 0,0,0,0, 0,0,0,1, 0,0,0,0] },
+  { bpm: 132, wave: 'sawtooth', scale: [50, 53, 55, 57, 60],          // 8 붉은협곡: 서부극 질주
+    bass: [0,0,-1,0, -1,0,3,-1, 0,0,-1,0, -1,4,3,2],
+    lead: [4,-1,4,-1, 5,4,2,-1, 4,-1,7,-1, 5,-1,4,2],
+    hat:  [1,0,1,1, 1,0,1,0, 1,0,1,1, 1,0,1,1] },
+  { bpm: 140, wave: 'square',   scale: [52, 55, 57, 59, 62, 64],      // 9 도시거리: 에너제틱 시티팝
+    bass: [0,-1,0,3, -1,3,0,-1, 2,-1,2,5, -1,5,4,3],
+    lead: [7,-1,5,7, -1,5,4,-1, 5,-1,4,5, -1,4,2,4],
+    hat:  [1,1,0,1, 1,0,1,1, 1,1,0,1, 1,0,1,1] },
+  { bpm: 138, wave: 'square',   scale: [60, 62, 64, 65, 67, 69, 71, 72], // 10 유치원길: 개선 행진 피날레
+    bass: [0,-1,4,-1, 0,-1,4,-1, 5,-1,3,-1, 4,4,-1,-1],
+    lead: [7,-1,7,-1, 9,-1,7,5, 4,5,7,-1, 9,-1,11,-1],
+    hat:  [1,0,1,1, 1,0,1,0, 1,0,1,1, 1,1,1,1] },
+];
+const midiHz = n => 440 * Math.pow(2, (n - 69) / 12);
+const BGM = {
+  cur: -1, iv: null, step: 0, nextT: 0,
+  tone(t, freq, dur, type, vol) {
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination);
+    o.start(t); o.stop(t + dur);
+  },
+  hat(t, vol) {
+    if (!this.nbuf) {
+      const n = actx.sampleRate * 0.06;
+      this.nbuf = actx.createBuffer(1, n, actx.sampleRate);
+      const d = this.nbuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    }
+    const s = actx.createBufferSource(); s.buffer = this.nbuf;
+    const f = actx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 6000;
+    const g = actx.createGain(); g.gain.value = vol;
+    s.connect(f).connect(g).connect(actx.destination);
+    s.start(t);
+  },
+  start(i) {
+    this.stop();
+    this.cur = i;
+    if (!actx || muted) return;
+    this.step = 0;
+    this.nextT = actx.currentTime + 0.08;
+    this.iv = setInterval(() => this.tick(), 90);
+  },
+  stop() { if (this.iv) { clearInterval(this.iv); this.iv = null; } },
+  tick() {
+    if (!actx || muted) { this.stop(); return; }
+    const m = MUSIC[((this.cur % 10) + 10) % 10];
+    const spb = 60 / m.bpm / 4;
+    while (this.nextT < actx.currentTime + 0.24) {
+      const s = this.step % 16, t = this.nextT;
+      const deg = (arr, idx) => midiHz(m.scale[idx % m.scale.length] + 12 * Math.floor(idx / m.scale.length));
+      if (m.bass[s] >= 0) this.tone(t, deg(m.scale, m.bass[s]) / 2, spb * 1.8, 'triangle', 0.055);
+      if (m.lead[s] >= 0) this.tone(t, deg(m.scale, m.lead[s]), spb * 1.4, m.wave, m.wave === 'sawtooth' ? 0.028 : 0.04);
+      if (m.hat[s]) this.hat(t, 0.018);
+      this.nextT += spb;
+      this.step++;
+    }
+  },
+};
+
 // ---------- 캔버스/스케일 (세로/가로 모두 지원) ----------
 let W = 0, H = 0, DPR = 1, SC = 1, groundY = 0;
 function resize() {
@@ -244,7 +372,7 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
   if (G.shots) for (const s of G.shots) { s.x *= rx; s.y = groundY - (oldGroundY - s.y) * rs; s.vy *= rs; s.vx *= rs; }
   for (const s of G.signs) s.x *= rx;
   for (const t of G.hints) t.x *= rx;
-  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 780 * SC;
+  G.speed *= rs; G.baseSpeed *= rs; G.maxSpeed = 897 * SC;
   G.spawnPx *= rx;
   G.parts = []; G.pops = [];
 }
@@ -253,14 +381,15 @@ window.addEventListener('orientationchange', () => setTimeout(resize, 60));
 resize();
 
 // ---------- 게임 상태 ----------
-const ST = { MENU: 0, INTRO: 1, COUNT: 2, RUN: 3, CAUGHT: 4, OVER: 5, PAUSE: 6, REVIVE: 7, EVENT: 8 };
+const ST = { MENU: 0, INTRO: 1, COUNT: 2, RUN: 3, CAUGHT: 4, OVER: 5, PAUSE: 6, REVIVE: 7, EVENT: 8, CLEAR: 9, FIN: 10 };
 let state = ST.MENU;
 
 const G = {};
-function resetGame() {
-  G.speed = 330 * SC;
-  G.baseSpeed = 330 * SC;
-  G.maxSpeed = 780 * SC;
+let runFrom = 0; // 체크포인트 시작 지점 (m)
+function resetGame(fromM = runFrom) {
+  G.speed = 380 * SC;
+  G.baseSpeed = 380 * SC;
+  G.maxSpeed = 897 * SC;
   G.score = 0;
   G.bonesCnt = 0;
   G.tigerDist = 62;
@@ -274,9 +403,8 @@ function resetGame() {
   // 로그라이크 런 상태
   G.perks = {};
   G.shots = [];        // 코코넛 등 투사체
-  G.nextEventAt = 850;
   G.eventCnt = 0;
-  G.rainT = 0; G.rainNext = 550 + Math.random() * 500;
+  G.rainT = 0; G.rainNext = fromM + 550 + Math.random() * 500;
   G.tiger = { anim: 0, lunge: 0 };
   G.obstacles = [];   // {kind, x, dw, dh, ...} branch: barBottom / toucan: y0,t
   G.holes = [];
@@ -286,8 +414,8 @@ function resetGame() {
   G.pops = [];        // 떠오르는 점수 텍스트 {x,y,txt,t,life,c,big}
   G.signs = [];
   G.hints = [];       // 튜토리얼 말풍선 {x,y,txt}
-  G.worldX = 0;
-  G.nextMilestone = 500;
+  G.worldX = fromM;
+  G.nextMilestone = fromM + 500;
   G.shake = 0; G.flash = 0; G.caughtT = 0;
   G.slowRecover = 0;
   // 콤보/피버
@@ -301,15 +429,17 @@ function resetGame() {
   G.spawnPx = 620 * SC;
   G.lastChunk = '';
   G.powCd = 2;
-  G.queue = totals.runs === 0 ? ['bones_line', 'rock', 'bones_arc', 'log', 'branch_intro', 'bones_line'] : [];
+  G.queue = (totals.runs === 0 && fromM === 0) ? ['bones_line', 'rock', 'bones_arc', 'log', 'branch_intro', 'bones_line'] : [];
   // 기록
   G.nearCnt = 0; G.slideCnt = 0; G.noHitDist = 0; G.newAch = []; G.hitCnt = 0; G.hitByKind = {};
   G.reviveUsed = false; G.reviveT = 0;
-  // 스테이지
-  G.stage = 0; G.stagePrev = 0; G.stageFade = 1;
+  // 스테이지 (체크포인트 시작 반영)
+  G.stage = Math.min(9, Math.floor(fromM / STAGE_LEN));
+  G.stagePrev = G.stage; G.stageFade = 1;
+  G.pendingStage = null; G.clearT = 0; G.clearShown = false; G.finT = 0; G.finShown = false;
   G.roarT = 0.5;
   // 연출
-  G.hitStop = 0; G.banner = null; G.bestBroken = false; G.deathBy = '';
+  G.hitStop = 0; G.banner = null; G.bestBroken = fromM > 0; G.deathBy = '';
   G.player.squash = 0;
   updateHUD(true);
 }
@@ -328,6 +458,8 @@ const ACH = [
   { id: 'nohit700',  name: '무결점 라이더',     desc: '부딪히지 않고 700m', icon: '🛡️' },
   { id: 'bones300',  name: '뼈다귀 콜렉터',     desc: '누적 뼈다귀 300개', icon: '💎' },
   { id: 'slide50',   name: '림보의 달인',       desc: '누적 슬라이드 50번', icon: '🐍' },
+  { id: 'stage5',    name: '절반 돌파',         desc: '5번째 스테이지 도달', icon: '🚩' },
+  { id: 'finish',    name: '등원 완주!',        desc: '10,000m — 유치원 도착!', icon: '🏫' },
 ];
 function unlock(id) {
   if (achState[id]) return;
@@ -363,6 +495,38 @@ const PERKS = [
   { id: 'boostLong', icon: '🚀', name: '오래가는 부스터', desc: '부스터 지속시간 1.5배',      apply() { G.perks.boostLong = true; } },
   { id: 'tigerRegen',icon: '🐾', name: '지구력 훈련',   desc: '호랑이가 더 빨리 뒤처짐',       apply() { G.perks.tigerRegen = true; } },
 ];
+// ---------- 스테이지 클리어 (폭죽 페이즈 → 퍼크 선택) ----------
+function fireworks() {
+  const cols = ['255,90,90', '255,200,80', '120,220,255', '190,140,255', '140,255,160', '255,150,220'];
+  const x = W * (0.12 + Math.random() * 0.76), y = H * (0.12 + Math.random() * 0.42);
+  const c = cols[(Math.random() * cols.length) | 0];
+  sparkle(x, y, 22, c);
+  ring(x, y, c, 320);
+}
+function startStageClear(newStg) {
+  state = ST.CLEAR;
+  G.clearT = 0; G.clearShown = false; G.pendingStage = newStg;
+  const saved = store.get('finfin_stage', 0);
+  if (newStg > saved) store.set('finfin_stage', newStg);
+  if (newStg >= 4) unlock('stage5');
+  showBanner(`STAGE ${newStg} 클리어!! 🎉`);
+  sfx.record(); sfx.fever(); vib([40, 40, 90]);
+  G.flash = 0.25;
+}
+function startFinish() {
+  state = ST.FIN;
+  G.finT = 0; G.finShown = false;
+  unlock('finish');
+  const score = Math.floor(G.score);
+  best = Math.max(score, best);
+  store.set('finfin_best', best);
+  totals.runs++;
+  store.set('finfin_tot', totals);
+  showBanner('🏫 유치원 도착!!! 🎉');
+  sfx.record(); sfx.fever(); vib([60, 50, 60, 50, 140]);
+  G.flash = 0.35;
+  BGM.stop();
+}
 function startEvent() {
   state = ST.EVENT;
   G.eventCnt++;
@@ -384,6 +548,20 @@ function startEvent() {
   wrap.querySelectorAll('.perk-card').forEach(btn => {
     btn.onclick = () => { sfx.power(); pickPerk(cards[+btn.dataset.i]); };
   });
+  // 스테이지 클리어 헤더 (진행 도트 + 다음 스테이지 미리보기)
+  const head = $('clearHead');
+  if (G.pendingStage != null) {
+    const n = G.pendingStage;
+    $('clearTitle').textContent = `🎉 STAGE ${n} 클리어!`;
+    $('clearNext').innerHTML = `다음 — ${STAGES[n].icon} <b>${STAGES[n].name}</b>`;
+    $('clearDots').innerHTML = STAGES.map((s, i) =>
+      `<span class="dot${i < n ? ' on' : ''}${i === n ? ' cur' : ''}"></span>`).join('');
+    head.classList.remove('hidden');
+    ui.event.classList.add('clear-mode');
+  } else {
+    head.classList.add('hidden');
+    ui.event.classList.remove('clear-mode');
+  }
   ui.event.classList.remove('hidden');
   sfx.stage(); vib(30);
 }
@@ -395,12 +573,21 @@ function pickPerk(pk) {
 }
 function endEvent() {
   ui.event.classList.add('hidden');
+  // 스테이지 전환 적용 (배경 크로스페이드 + 새 BGM)
+  if (G.pendingStage != null) {
+    const ns = G.pendingStage;
+    G.pendingStage = null;
+    G.stagePrev = G.stage; G.stage = ns; G.stageFade = 0;
+    BGM.start(ns);
+    showBanner(`${STAGES[ns].icon} ${STAGES[ns].name}`);
+    showToast(`${STAGES[ns].icon} ${STAGES[ns].name} — 출발!`);
+    sfx.go();
+  }
   state = ST.RUN;
   const p = G.player;
   p.invuln = Math.max(p.invuln, 1.2);
   G.tigerDist = Math.min(100, G.tigerDist + 8);  // 숨 고르기: 호랑이도 잠깐 쉼
   G.spawnPx = Math.max(G.spawnPx, 550 * SC);     // 복귀 여유
-  G.nextEventAt = G.worldX + 850 + Math.random() * 250;
 }
 
 // ---------- 입력 (오른쪽 탭=점프 · 왼쪽 홀드=슬라이드) ----------
@@ -494,6 +681,19 @@ function hsl2rgb(h, s, l) {
 }
 function pop(x, y, txt, c = '#ffe9a8', big = false) {
   G.pops.push({ x, y, txt, t: 0, life: big ? 1.1 : 0.8, c, big });
+}
+// 파티클/팝업/배너만 진행 (클리어·완주 연출용)
+function fxTick(dt) {
+  for (const pa of G.parts) {
+    pa.t += dt; pa.x += pa.vx * dt; pa.y += pa.vy * dt;
+    pa.vy += 300 * SC * dt * (pa.grav !== undefined ? pa.grav : 1);
+  }
+  G.parts = G.parts.filter(pa => pa.t < pa.life);
+  for (const pp of G.pops) { pp.t += dt; pp.y -= 46 * SC * dt; }
+  G.pops = G.pops.filter(pp => pp.t < pp.life);
+  if (G.banner) { G.banner.t += dt; if (G.banner.t > G.banner.life) G.banner = null; }
+  if (G.flash > 0) G.flash -= dt;
+  if (G.shake > 0) G.shake -= dt;
 }
 // 확장 링 이펙트 (피격/수집 임팩트)
 function ring(x, y, c, growth = 260) {
@@ -702,7 +902,8 @@ const CHUNKS = [
   } },
 ];
 const CHUNK_MAP = {}; CHUNKS.forEach(c => CHUNK_MAP[c.id] = c);
-function bandFor(m) { return m < 350 ? 1 : m < 900 ? 2 : m < 1700 ? 3 : m < 2800 ? 4 : 5; }
+// 난이도 밴드: 10,000m 여정 전체에 걸쳐 상승
+function bandFor(m) { return m < 600 ? 1 : m < 2200 ? 2 : m < 4500 ? 3 : m < 7000 ? 4 : 5; }
 function spawnChunk() {
   const x = W + 80 * SC;
   let chunk;
@@ -713,9 +914,11 @@ function spawnChunk() {
     }
   } else {
     const maxD = bandFor(G.worldX);
-    const pool = CHUNKS.filter(c =>
+    const stageSet = STAGES[Math.min(G.stage, 9)].set;
+    let pool = CHUNKS.filter(c =>
       c.d <= maxD && c.id !== G.lastChunk && (c.tag !== 'pow' || G.powCd <= 0) &&
-      (!c.stg || c.stg.indexOf(G.stage) >= 0));
+      stageSet.indexOf(c.id) >= 0);
+    if (!pool.length) pool = CHUNKS.filter(c => c.d <= 1 && c.id !== G.lastChunk);
     let total = 0;
     const weights = pool.map(c => {
       let w = c.d === maxD ? 2.2 : c.d === maxD - 1 ? 1.6 : 1;
@@ -888,6 +1091,19 @@ function collectPow(w) {
 function update(dt) {
   const p = G.player;
 
+  if (state === ST.CLEAR || state === ST.FIN) {
+    // 폭죽 페이즈: 월드는 정지, 이펙트만 진행
+    const isFin = state === ST.FIN;
+    const tKey = isFin ? 'finT' : 'clearT';
+    G[tKey] += dt;
+    G.tiger.anim += dt * 8;
+    p.anim += dt * 8;
+    if (Math.random() < dt * (isFin ? 24 : 15)) fireworks();
+    fxTick(dt);
+    if (!isFin && G.clearT > 1.6 && !G.clearShown) { G.clearShown = true; startEvent(); }
+    if (isFin && G.finT > 2.6 && !G.finShown) { G.finShown = true; showEnding(); }
+    return;
+  }
   if (state === ST.REVIVE) {
     G.reviveT -= dt;
     const n = Math.ceil(G.reviveT);
@@ -909,8 +1125,8 @@ function update(dt) {
   }
   if (state !== ST.RUN) return;
 
-  // 속도 (피버/부스터 배속) — 최고속 도달 ~1000m
-  const ramp = 4.6 * SC;
+  // 속도 (피버/부스터 배속) — 전체 1.15배 상향
+  const ramp = 5.3 * SC;
   G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + ramp * dt);
   let target = G.baseSpeed * (bike().speedMult || 1);
   if (G.feverT > 0) target = G.baseSpeed * 1.42;
@@ -921,21 +1137,13 @@ function update(dt) {
   G.worldX += dx / (42 * SC);
   G.score = Math.max(G.score, G.worldX + G.bonesCnt * 15);
 
-  // 스테이지 (700m 주기: 낮→노을→밤)
-  const stg = Math.floor(G.worldX / 700) % 3;
-  if (stg !== G.stage) {
-    G.stagePrev = G.stage; G.stage = stg; G.stageFade = 0;
-    sfx.stage();
-    showBanner(stg === 1 ? '🌇 노을 정글' : stg === 2 ? '🌙 밤의 정글' : '🌞 아침 정글', '#ffe9a8');
-    showToast(stg === 1 ? '해가 저물어 간다…' : stg === 2 ? '반딧불이 반짝반짝!' : '아침 해가 떴다!');
-  }
-  if (G.stageFade < 1) G.stageFade = Math.min(1, G.stageFade + dt * 0.8);
+  // 완주!
+  if (G.worldX >= TOTAL_M) { startFinish(); return; }
 
-  // 카툰 이벤트 (안전한 타이밍에만: 지상 + 피버/부스터 아님)
-  if (G.worldX >= G.nextEventAt && p.onGround && !p.falling && G.feverT <= 0 && G.boostT <= 0) {
-    startEvent();
-    return;
-  }
+  // 스테이지 클리어 (1,000m마다 — 폭죽 + 퍼크 선택 이벤트)
+  const stg = Math.min(9, Math.floor(G.worldX / STAGE_LEN));
+  if (stg !== G.stage) { startStageClear(stg); return; }
+  if (G.stageFade < 1) G.stageFade = Math.min(1, G.stageFade + dt * 0.8);
 
   // 소나기 이벤트
   if (G.rainT > 0) G.rainT -= dt;
@@ -960,7 +1168,7 @@ function update(dt) {
   // 마일스톤
   if (G.worldX >= G.nextMilestone) {
     G.nextMilestone += 500;
-    G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + 18 * SC);
+    G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + 21 * SC);
     G.tigerDist = Math.min(100, G.tigerDist + 6);
     sfx.power();
     showToast(`🏫 ${Math.floor(G.worldX)}m! 유치원이 가까워진다!`);
@@ -1243,24 +1451,32 @@ function update(dt) {
   for (const pp of G.pops) { pp.t += dt; pp.y -= 46 * SC * dt; }
   G.pops = G.pops.filter(pp => pp.t < pp.life);
 
-  // 스테이지 앰비언트: 밤 반딧불 / 아침 낙엽 / 노을 꽃가루
-  if (G.stage === 2 && Math.random() < dt * 6) {
+  // 스테이지 앰비언트 (STAGES.amb: leaf/petal/glow/pollen/mist)
+  const amb = STAGES[Math.min(G.stage, 9)].amb;
+  if (amb === 'glow' && Math.random() < dt * 6) {
     G.parts.push({
       x: W + 20, y: groundY - (60 + Math.random() * 380) * SC,
       vx: -(G.speed * 0.4 + Math.random() * 40 * SC), vy: (Math.random() - 0.5) * 30 * SC,
       r: (2 + Math.random() * 2.5) * SC, life: 3.5, t: 0, c: '190,255,120', grav: 0, glow: 1,
     });
-  } else if (G.stage === 0 && Math.random() < dt * 4) {
+  } else if ((amb === 'leaf' || amb === 'petal') && Math.random() < dt * 4.5) {
     G.parts.push({
       x: W * (0.3 + Math.random() * 0.8), y: -20,
       vx: -(G.speed * 0.3 + 30 * SC), vy: (60 + Math.random() * 50) * SC,
-      r: (3 + Math.random() * 3) * SC, life: 4, t: 0, c: '110,190,80', grav: 0, leaf: 1,
+      r: (3 + Math.random() * 3) * SC, life: 4, t: 0,
+      c: amb === 'petal' ? '255,185,215' : '110,190,80', grav: 0, leaf: 1,
     });
-  } else if (G.stage === 1 && Math.random() < dt * 5) {
+  } else if (amb === 'pollen' && Math.random() < dt * 5) {
     G.parts.push({
       x: W + 20, y: groundY - (40 + Math.random() * 420) * SC,
       vx: -(G.speed * 0.35 + Math.random() * 30 * SC), vy: (Math.random() - 0.3) * 26 * SC,
       r: (1.6 + Math.random() * 2) * SC, life: 3.2, t: 0, c: '255,214,140', grav: 0, glow: 1,
+    });
+  } else if (amb === 'mist' && Math.random() < dt * 2.2) {
+    G.parts.push({
+      x: W + 40, y: groundY - (20 + Math.random() * 200) * SC,
+      vx: -(G.speed * 0.25 + 20 * SC), vy: -(4 + Math.random() * 10) * SC,
+      r: (14 + Math.random() * 22) * SC, life: 5, t: 0, c: '225,242,250', grav: 0, mist: 1,
     });
   }
   // 소나기 빗방울
@@ -1293,6 +1509,8 @@ function updateHUD(force) {
   if (force || hudCache.b !== b) { ui.bones.textContent = b; hudCache.b = b; }
   const tw = Math.round(100 - G.tigerDist) + '%';
   if (force || hudCache.tw !== tw) { ui.tigerFill.style.width = tw; hudCache.tw = tw; }
+  const jw = Math.min(100, G.worldX / TOTAL_M * 100).toFixed(1) + '%';
+  if (force || hudCache.jw !== jw) { ui.journeyFill.style.width = jw; hudCache.jw = jw; }
   const fv = Math.round(G.fever * 100) + '%';
   if (force || hudCache.fv !== fv) { ui.feverFill.style.width = fv; hudCache.fv = fv; }
   const fa = G.feverT > 0;
@@ -1314,11 +1532,9 @@ function updateHUD(force) {
 }
 
 // ---------- 그리기 ----------
-const STAGE_TINT = [null, 'rgba(255,140,60,0.10)', 'rgba(30,50,140,0.17)'];
 function stageBg(i) {
-  if (i === 1 && img.bgSunset && img.bgSunset.width) return img.bgSunset;
-  if (i === 2 && img.bgNight && img.bgNight.width) return img.bgNight;
-  return img.bg;
+  const im = img[STAGES[Math.min(i, 9)].bg];
+  return (im && im.width) ? im : img.bg;
 }
 function draw() {
   ctx.clearRect(0, 0, W, H);
@@ -1342,7 +1558,7 @@ function draw() {
   ctx.restore();
 
   // 스테이지 틴트
-  const tint = STAGE_TINT[G.stage];
+  const tint = STAGES[Math.min(G.stage, 9)].tint;
   if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, W, H); }
   // 소나기 톤
   if (G.rainT > 0) {
@@ -1406,7 +1622,12 @@ function drawBG() {
   } else drawOne(cur, 1);
   // 중경 실루엣 패럴랙스 (덤불/수풀 층 — 깊이감)
   const mw = 250 * SC;
-  const mCol = G.stage === 2 ? 'rgba(6,12,24,0.55)' : G.stage === 1 ? 'rgba(30,14,8,0.45)' : 'rgba(7,22,12,0.5)';
+  const si = Math.min(G.stage, 9);
+  const mCol = si === 6 ? 'rgba(6,12,24,0.55)'
+    : (si === 5 || si === 7) ? 'rgba(30,14,8,0.45)'
+    : (si === 2) ? 'rgba(10,24,30,0.35)'
+    : (si === 8 || si === 9) ? 'rgba(12,14,20,0.35)'
+    : 'rgba(7,22,12,0.5)';
   ctx.fillStyle = mCol;
   tileLoop(mw, G.worldX * 42 * SC * 0.55, (bx, m) => {
     const seed = ((Math.round(bx + G.worldX * 42 * SC * 0.55) / mw) | 0);
@@ -1789,6 +2010,11 @@ function drawParts() {
       ctx.lineTo(pa.x - pa.vx * 0.016, pa.y - pa.vy * 0.016);
       ctx.stroke();
       if (pa.y > groundY) pa.t = pa.life; // 지면 도달 시 제거
+    } else if (pa.mist) {
+      ctx.fillStyle = `rgba(${pa.c},${a * 0.08})`;
+      ctx.beginPath();
+      ctx.arc(pa.x, pa.y, pa.r, 0, Math.PI * 2);
+      ctx.fill();
     } else if (pa.leaf) {
       ctx.save();
       ctx.translate(pa.x, pa.y);
@@ -1927,18 +2153,21 @@ document.addEventListener('visibilitychange', () => {
 function doPause() {
   if (state !== ST.RUN) return;
   state = ST.PAUSE;
+  BGM.stop();
   ui.pause.classList.remove('hidden');
 }
 function doResume() {
   if (state !== ST.PAUSE) return;
   ui.pause.classList.add('hidden');
   state = ST.RUN;
+  BGM.start(G.stage);
   G.player.invuln = Math.max(G.player.invuln, 0.6);
 }
 ui.pauseBtn.addEventListener('click', () => { sfx.click(); doPause(); });
 ui.resumeBtn.addEventListener('click', () => { sfx.click(); doResume(); });
 ui.quitBtn.addEventListener('click', () => {
   sfx.click();
+  BGM.stop();
   ui.pause.classList.add('hidden');
   ui.hud.classList.add('hidden');
   state = ST.MENU;
@@ -1957,15 +2186,29 @@ function toggleMute() {
   muted = !muted;
   store.set('finfin_mute', muted);
   refreshMute();
-  if (!muted) sfx.click();
+  if (muted) BGM.stop();
+  else { sfx.click(); if (state === ST.RUN) BGM.start(G.stage); }
 }
 ui.muteBtn.addEventListener('click', toggleMute);
 ui.pMuteBtn.addEventListener('click', toggleMute);
 
 // ---------- 화면 전환 ----------
 function showScreen(el) {
-  [ui.start, ui.intro, ui.countdown, ui.gameover].forEach(s => s.classList.add('hidden'));
+  [ui.start, ui.intro, ui.countdown, ui.gameover, ui.ending].forEach(s => s.classList.add('hidden'));
   if (el) el.classList.remove('hidden');
+}
+
+// ---------- 완주 엔딩 ----------
+function showEnding() {
+  ui.hud.classList.add('hidden');
+  $('endBones').textContent = G.bonesCnt;
+  $('endCombo').textContent = G.comboMax;
+  $('endFever').textContent = G.feverCnt;
+  showScreen(ui.ending);
+  if (G.newAch.length) {
+    $('endAch').innerHTML = G.newAch.map(a => `<span class="go-badge">${a.icon} ${a.name}</span>`).join('');
+    $('endAch').classList.remove('hidden');
+  } else $('endAch').classList.add('hidden');
 }
 
 function playIntro() {
@@ -2007,6 +2250,7 @@ function startCountdown() {
       showScreen(null);
       sfx.go();
       state = ST.RUN;
+      BGM.start(G.stage);
     } else {
       ui.countNum.textContent = n;
       sfx.count();
@@ -2019,6 +2263,7 @@ function startCountdown() {
 
 function endGame() {
   state = ST.OVER;
+  BGM.stop();
   const score = Math.floor(G.score);
   const isRecord = score > best && best > 0;
   best = Math.max(score, best);
@@ -2095,7 +2340,18 @@ function refreshTitle() {
   ui.titleMeta.innerHTML =
     (best > 0 ? `🏆 최고 기록 <b>${best}m</b> &nbsp;·&nbsp; ` : '') +
     `🏅 도전과제 <b>${achCount()}/${ACH.length}</b> &nbsp;·&nbsp; ${bike().icon} <b>${bike().name}</b>`;
+  // 체크포인트 이어달리기
+  const saved = Math.min(store.get('finfin_stage', 0), 9);
+  if (saved >= 1) {
+    ui.contBtn.textContent = `🚩 이어 등원 — ${STAGES[saved].icon} ${STAGES[saved].name} (${saved + 1}번째)부터`;
+    ui.contBtn.classList.remove('hidden');
+  } else ui.contBtn.classList.add('hidden');
 }
+ui.contBtn && ui.contBtn.addEventListener('click', () => {
+  audioInit(); sfx.click();
+  runFrom = Math.min(store.get('finfin_stage', 0), 9) * STAGE_LEN;
+  startCountdown();
+});
 
 // ---------- 바이크 차고 ----------
 const BIKE_COLOR = { pink: '#f5a8c0', rocket: '#ff8a3d', low: '#b06ff0', wing: '#6fc8f0', tank: '#7fc45e' };
@@ -2129,9 +2385,11 @@ ui.garageBtn.addEventListener('click', openGarage);
 ui.garageClose.addEventListener('click', () => { sfx.click(); ui.garage.classList.add('hidden'); });
 
 // ---------- 버튼 ----------
-ui.startBtn.addEventListener('click', () => { audioInit(); sfx.click(); playIntro(); });
+ui.startBtn.addEventListener('click', () => { audioInit(); sfx.click(); runFrom = 0; playIntro(); });
 ui.retryBtn.addEventListener('click', () => { audioInit(); sfx.click(); startCountdown(); });
-ui.introBtn.addEventListener('click', () => { audioInit(); sfx.click(); playIntro(); });
+ui.introBtn.addEventListener('click', () => { audioInit(); sfx.click(); runFrom = 0; playIntro(); });
+ui.endRestartBtn.addEventListener('click', () => { audioInit(); sfx.click(); runFrom = 0; startCountdown(); });
+ui.endShareBtn.addEventListener('click', () => ui.shareBtn.click());
 
 // ---------- 테스트 모드 (?test) ----------
 if (location.search.indexOf('test') >= 0) {
@@ -2154,6 +2412,10 @@ if (location.search.indexOf('test') >= 0) {
     event: startEvent,
     endEvent,
     rain() { G.rainT = 7; },
+    clearNow() { G.worldX = (G.stage + 1) * STAGE_LEN + 1; },
+    finNow() { G.worldX = TOTAL_M; },
+    from(m) { runFrom = m; },
+    bgm: () => BGM,
     // 난이도 계측용 자동 플레이 봇 (reactSec: 반응 속도 — 사람 평균 ~0.42s)
     botRun(reactSec = 0.42, maxMs = 240000) {
       this.go();
@@ -2165,6 +2427,8 @@ if (location.search.indexOf('test') >= 0) {
           const c = ui.event.querySelector('.perk-card');
           if (c) c.click(); else endEvent();
         }
+        if (state === ST.CLEAR) { update(0.016); continue; } // 폭죽 페이즈 통과
+        if (state === ST.FIN) break; // 완주!
         if (state !== ST.RUN && state !== ST.CAUGHT) break;
         if (state === ST.RUN) {
           const react = G.speed * reactSec + 40 * SC;
