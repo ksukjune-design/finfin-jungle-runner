@@ -485,12 +485,12 @@ const GAGS = [
   { s: '뼈다귀 하나 나눠줄까? 히히', t: '어흥!! (배에서 꼬르르륵…)' },
 ];
 const PERKS = [
-  { id: 'boneUp',    icon: '🦴', name: '간식의 힘',     desc: '뼈다귀 점수 1.5배',            apply() { G.perks.boneMult = 1.5; } },
+  { id: 'boneUp',    icon: '🦴', name: '간식의 힘',     desc: '뼈 8개 콤보 시 호랑이를 더 멀리!', apply() { G.perks.boneUp = true; } },
   { id: 'feverFast', icon: '🌈', name: '피버 부스트',   desc: '피버 게이지가 더 빨리 참',      apply() { G.perks.feverNeed = 12; } },
   { id: 'miniMag',   icon: '🧲', name: '자석 코팅',     desc: '약한 자석 효과가 계속 유지',    apply() { G.perks.miniMag = true; } },
   { id: 'helmet',    icon: '⛑️', name: '안전모 지급',   desc: '지금 바로 헬멧 장착!',          apply() { G.shield = true; } },
   { id: 'tigerPush', icon: '💨', name: '전력 질주',     desc: '호랑이와의 거리가 확 벌어짐',   apply() { G.tigerDist = Math.min(100, G.tigerDist + 28); } },
-  { id: 'near2',     icon: '😎', name: '곡예사의 혼',   desc: '아슬아슬 보너스 2배 (+60)',     apply() { G.perks.near2 = true; } },
+  { id: 'near2',     icon: '😎', name: '곡예사의 혼',   desc: '아슬아슬 통과 시 피버 게이지 2배', apply() { G.perks.near2 = true; } },
   { id: 'slideTurbo',icon: '🐍', name: '림보 터보',     desc: '슬라이드 중 피버 게이지 충전',  apply() { G.perks.slideTurbo = true; } },
   { id: 'boostLong', icon: '🚀', name: '오래가는 부스터', desc: '부스터 지속시간 1.5배',      apply() { G.perks.boostLong = true; } },
   { id: 'tigerRegen',icon: '🐾', name: '지구력 훈련',   desc: '호랑이가 더 빨리 뒤처짐',       apply() { G.perks.tigerRegen = true; } },
@@ -506,12 +506,21 @@ function fireworks() {
 function startStageClear(newStg) {
   state = ST.CLEAR;
   G.clearT = 0; G.clearShown = false; G.pendingStage = newStg;
+  // 필드 정리: 세리머니·재개 중 불공정 사망 방지 (공중/구덩이 위 교차 케이스)
+  const p = G.player;
+  G.obstacles = []; G.holes = []; G.shots = [];
+  if (p.falling || p.y > groundY) {
+    p.falling = false; p.y = groundY; p.vy = 0; p.onGround = true; p.jumps = 0;
+  }
+  p.sliding = false; p.fastFall = false;
+  G.spawnPx = Math.max(G.spawnPx, 600 * SC);
   const saved = store.get('finfin_stage', 0);
   if (newStg > saved) store.set('finfin_stage', newStg);
   if (newStg >= 4) unlock('stage5');
   showBanner(`STAGE ${newStg} 클리어!! 🎉`);
   sfx.record(); sfx.fever(); vib([40, 40, 90]);
   G.flash = 0.25;
+  updateHUD(true); // 세리머니 중 HUD가 경계 직전 값(999m)으로 멈춰 보이지 않게
 }
 function startFinish() {
   state = ST.FIN;
@@ -1080,7 +1089,6 @@ function collectPow(w) {
     G.bonesCnt += 5;
     G.combo += 5;
     G.comboMax = Math.max(G.comboMax, G.combo);
-    G.score += 120;
     if (G.feverT <= 0) G.fever = Math.min(1, G.fever + 5 / (G.perks.feverNeed || 16));
     sfx.gold(); pop(w.x, w.y - 30 * SC, '💛 황금 뼈다귀 +5!', '#ffd75e', true);
   }
@@ -1135,7 +1143,7 @@ function update(dt) {
   else G.speed += (target - G.speed) * Math.min(1, dt * 3);
   const dx = G.speed * dt;
   G.worldX += dx / (42 * SC);
-  G.score = Math.max(G.score, G.worldX + G.bonesCnt * 15);
+  G.score = G.worldX; // 점수 = 순수 거리(m) — 표시 미터와 스테이지 경계 완전 일치
 
   // 완주!
   if (G.worldX >= TOTAL_M) { startFinish(); return; }
@@ -1165,14 +1173,17 @@ function update(dt) {
     sfx.record(); vib([30, 30, 80]);
   }
 
-  // 마일스톤
+  // 마일스톤 (1,000m 배수는 스테이지 세리머니와 겹치므로 조용히 적용)
   if (G.worldX >= G.nextMilestone) {
+    const silent = G.nextMilestone % STAGE_LEN === 0;
     G.nextMilestone += 500;
     G.baseSpeed = Math.min(G.maxSpeed, G.baseSpeed + 21 * SC);
     G.tigerDist = Math.min(100, G.tigerDist + 6);
-    sfx.power();
-    showToast(`🏫 ${Math.floor(G.worldX)}m! 유치원이 가까워진다!`);
-    G.signs.push({ x: W + 60 * SC });
+    if (!silent) {
+      sfx.power();
+      showToast(`🏫 ${Math.floor(G.worldX)}m! 유치원이 가까워진다!`);
+      G.signs.push({ x: W + 60 * SC });
+    }
   }
 
   // 도전과제 (거리/노히트)
@@ -1389,11 +1400,9 @@ function update(dt) {
       } else if (mb.x + mb.w < pb.x && o.minClear < 26 * SC) {
         o.nearDone = true;
         G.nearCnt++;
-        const nb = G.perks.near2 ? 60 : 30;
-        G.score += nb;
-        if (G.feverT <= 0) G.fever = Math.min(1, G.fever + (G.perks.near2 ? 0.06 : 0.03));
+        if (G.feverT <= 0) G.fever = Math.min(1, G.fever + (G.perks.near2 ? 0.07 : 0.035));
         sfx.near();
-        pop(p.x, p.y - p.h * 1.15, `아슬아슬! +${nb}`, '#9fe8ff');
+        pop(p.x, p.y - p.h * 1.15, G.perks.near2 ? '아슬아슬!! 🔥' : '아슬아슬!', '#9fe8ff');
         if (G.nearCnt >= 10) unlock('near10');
       }
     }
@@ -1408,8 +1417,6 @@ function update(dt) {
       totals.bones++;
       G.combo++;
       G.comboMax = Math.max(G.comboMax, G.combo);
-      const bonus = Math.round((15 + Math.min(40, G.combo * 2) + (G.feverT > 0 ? 15 : 0)) * (G.perks.boneMult || 1));
-      G.score += bonus;
       sfx.collect();
       ring(b.x, b.y, '255,240,180', 130);
       if (G.combo > 0 && G.combo % 10 === 0) {
@@ -1425,7 +1432,7 @@ function update(dt) {
       if (totals.bones >= 300) unlock('bones300');
       if (G.combo >= 15) unlock('combo15');
       if (G.bonesCnt % 8 === 0) {
-        G.tigerDist = Math.min(100, G.tigerDist + 12);
+        G.tigerDist = Math.min(100, G.tigerDist + (G.perks.boneUp ? 20 : 12));
         sfx.power();
         showToast('간식 파워!! 🦴 호랑이를 따돌렸다!');
       }
@@ -2126,27 +2133,35 @@ function drawSpeedLines() {
 }
 
 // ---------- 메인 루프 ----------
+// 프레임 본체 — 실제 rAF 루프와 테스트 훅이 동일 경로를 사용 (상태 게이팅 불일치 방지)
 let lastT = 0;
+function frame(dt, skipDraw) {
+  if (state === ST.PAUSE) return;
+  // 히트스톱: 짧은 프레임 정지로 타격감 강조
+  if (G.hitStop > 0 && (state === ST.RUN || state === ST.CAUGHT)) {
+    G.hitStop -= dt;
+    if (assetsReady && !skipDraw) draw();
+    return;
+  }
+  if (state === ST.RUN || state === ST.CAUGHT || state === ST.REVIVE ||
+      state === ST.CLEAR || state === ST.FIN) update(dt);
+  if (assetsReady && !skipDraw && state !== ST.MENU && state !== ST.INTRO) draw();
+}
 function loop(t) {
   requestAnimationFrame(loop);
   let dt = (t - lastT) / 1000;
   if (!isFinite(dt) || dt < 0) dt = 0;
   dt = Math.min(0.034, dt);
   lastT = t;
-  if (state === ST.PAUSE) return;
-  // 히트스톱: 짧은 프레임 정지로 타격감 강조
-  if (G.hitStop > 0 && (state === ST.RUN || state === ST.CAUGHT)) {
-    G.hitStop -= dt;
-    if (assetsReady) draw();
-    return;
-  }
-  if (state === ST.RUN || state === ST.CAUGHT || state === ST.REVIVE) update(dt);
-  if (assetsReady && state !== ST.MENU && state !== ST.INTRO) draw();
+  frame(dt, false);
 }
 requestAnimationFrame(loop);
 document.addEventListener('visibilitychange', () => {
   if (window.__test) return; // 테스트 모드: 자동 일시정지 없음
-  if (document.hidden && state === ST.RUN) doPause();
+  if (document.hidden) {
+    BGM.stop(); // 어떤 상태든 백그라운드에선 음악 정지
+    if (state === ST.RUN) doPause();
+  }
 });
 
 // ---------- 일시정지 ----------
@@ -2395,7 +2410,7 @@ ui.endShareBtn.addEventListener('click', () => ui.shareBtn.click());
 if (location.search.indexOf('test') >= 0) {
   window.__test = {
     go() { resetGame(); showScreen(null); [ui.event, ui.revive, ui.pause].forEach(e => e.classList.add('hidden')); ui.hud.classList.remove('hidden'); state = ST.RUN; },
-    sim(ms) { const n = Math.round(ms / 16); for (let i = 0; i < n; i++) update(0.016); draw(); },
+    sim(ms) { const n = Math.round(ms / 16); for (let i = 0; i < n; i++) frame(0.016, true); draw(); },
     warp(m) { G.worldX = m; G.nextMilestone = Math.ceil(m / 500) * 500 + 500; },
     caught: startCaught,
     state: () => state,
@@ -2427,7 +2442,7 @@ if (location.search.indexOf('test') >= 0) {
           const c = ui.event.querySelector('.perk-card');
           if (c) c.click(); else endEvent();
         }
-        if (state === ST.CLEAR) { update(0.016); continue; } // 폭죽 페이즈 통과
+        if (state === ST.CLEAR) { frame(0.016, true); continue; } // 폭죽 페이즈 통과
         if (state === ST.FIN) break; // 완주!
         if (state !== ST.RUN && state !== ST.CAUGHT) break;
         if (state === ST.RUN) {
@@ -2457,7 +2472,7 @@ if (location.search.indexOf('test') >= 0) {
           if (!p.onGround && p.vy > 150 * SC && p.jumps === 1 &&
               ((jumpD < 1e8 && jumpD > -70 * SC) || overHole(p.x + p.w * 0.8))) jumpInput();
         }
-        update(0.016);
+        frame(0.016, true);
         if (G.worldX < 300) G.earlyHits = G.hitCnt;
       }
       input.keySlide = false;
