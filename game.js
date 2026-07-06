@@ -44,6 +44,32 @@ let totals = store.get('finfin_tot', { runs: 0, bones: 0, slides: 0 });
 let achState = store.get('finfin_ach', {});
 let muted = store.get('finfin_mute', false);
 
+// ---------- 외부 연동 브리지 (커뮤니티 앱 통합용) ----------
+// 게임 이벤트를 CustomEvent('finfin:*') + parent postMessage 로 발행.
+// 로그인/보상/분석 연동은 이 이벤트를 구독하면 됨 (docs/INTEGRATION.md 참조).
+const Bridge = {
+  emit(type, detail) {
+    try {
+      const payload = Object.assign({ game: 'finfin-runner', type, ts: Date.now() }, detail || {});
+      window.dispatchEvent(new CustomEvent('finfin:' + type, { detail: payload }));
+      if (window.parent && window.parent !== window) window.parent.postMessage(payload, '*');
+      if (typeof window.FinFinGameCallback === 'function') window.FinFinGameCallback(payload);
+    } catch (e) {}
+  },
+};
+window.FinFinGame = {
+  version: 11,
+  config: { user: null },   // 커뮤니티 앱이 로그인 유저 컨텍스트 주입 가능
+  getState() {
+    return {
+      state, best,
+      distance: G.worldX ? Math.floor(G.worldX) : 0,
+      stage: G.stage || 0,
+      bones: G.bonesCnt || 0,
+    };
+  },
+};
+
 // ---------- 에셋 ----------
 const IMG_SRC = {
   shiba1: 'assets/sprites/shiba_1.png',
@@ -591,6 +617,7 @@ function unlock(id) {
   store.set('finfin_ach', achState);
   const a = ACH.find(a => a.id === id);
   G.newAch && G.newAch.push(a);
+  Bridge.emit('achievement', { id, name: a.name });
   const bk = Object.keys(BIKES).find(k => BIKES[k].unlock === id);
   showToast(bk ? `🏅 ${a.name}! 🚲 차고에 [${BIKES[bk].name}] 해금!` : `🏅 도전과제 달성 — ${a.name}!`);
   sfx.record(); vib([30, 40, 60]);
@@ -641,6 +668,7 @@ function startStageClear(newStg) {
   const saved = store.get('finfin_stage', 0);
   if (newStg > saved) store.set('finfin_stage', newStg);
   if (newStg >= 4) unlock('stage5');
+  Bridge.emit('stageclear', { stage: newStg, distance: Math.floor(G.worldX), bones: G.bonesCnt });
   showBanner(`STAGE ${newStg} 클리어!! 🎉`);
   camPunch(1.15, 1.2);
   sfx.record(); sfx.fever(); vib([40, 40, 90]);
@@ -657,6 +685,9 @@ function startFinish() {
   totals.runs++;
   store.set('finfin_tot', totals);
   showBanner('🏫 유치원 도착!!! 🎉');
+  Bridge.emit('finish', {
+    distance: TOTAL_M, bones: G.bonesCnt, comboMax: G.comboMax, fevers: G.feverCnt, best,
+  });
   camPunch(1.22, 1.1); slowmo(0.4, 0.5);
   cutIn('faceShiba', '등원 성공!! 🎉');
   sfx.record(); sfx.fever(); vib([60, 50, 60, 50, 140]);
@@ -2922,6 +2953,7 @@ function startCountdown() {
       sfx.go();
       state = ST.RUN;
       BGM.start(G.stage);
+      Bridge.emit('start', { from: runFrom, stage: G.stage, bike: bikeId });
     } else {
       ui.countNum.textContent = n;
       sfx.count();
@@ -2944,6 +2976,10 @@ function endGame() {
   unlock('first_run');
   store.set('finfin_ach', achState);
 
+  Bridge.emit('gameover', {
+    distance: score, bones: G.bonesCnt, comboMax: G.comboMax, fevers: G.feverCnt,
+    stage: G.stage, best, isRecord, reason: G.deathBy || 'tiger',
+  });
   ui.goScore.textContent = score;
   ui.goBones.textContent = G.bonesCnt;
   ui.goBest.textContent = best;
