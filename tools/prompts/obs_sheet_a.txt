@@ -1,0 +1,10 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key MAGENTA background (#FF00FF). No gradients, no shadows, no floor. Each subject floats centered in its own quadrant with generous margin, never touching quadrant borders. (Magenta background because some subjects are green.)
+
+Four obstacle characters for a cute mobile runner game, all in the same style: cute stylized 3D-rendered cartoon (mobile game quality), clean crisp silhouettes, vibrant colors, side view facing LEFT.
+
+- Top-left: a cheeky red-orange CRAB with big raised pincers and cartoon angry eyes, side-stepping pose.
+- Top-right: a tall green SAGUARO CACTUS with two arms, small comic face (annoyed), tiny flowers on top — clearly TALL and narrow.
+- Bottom-left: a plump green tropical FROG mid-crouch, big eyes, ready to hop, facing left.
+- Bottom-right: a rolled-up brown HEDGEHOG ball with visible spikes and a small face peeking, ready to roll.
+
+Absolutely no text, no watermark, no background scenery, no grid lines.

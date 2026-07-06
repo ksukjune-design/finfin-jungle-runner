@@ -1,0 +1,10 @@
+Create a 2x2 sprite sheet grid (four equal quadrants) on a pure flat solid chroma-key green background (#00FF00). No gradients, no shadows, no floor. Each object floats centered in its own quadrant with generous margin, never touching quadrant borders.
+
+Four obstacle objects for a cute mobile runner game, all in the same style: cute stylized 3D-rendered cartoon (mobile game quality), clean crisp silhouettes, vibrant colors, side view.
+
+- Top-left: a friendly SCARECROW on a wooden pole — straw hat, button eyes, patched shirt, straw sticking out of sleeves.
+- Top-right: a stack of two orange-white striped TRAFFIC CONES, slightly tilted, comic style.
+- Bottom-left: a dented metal TRASH CAN with the lid ajar and a banana peel poking out, blue-grey metal.
+- Bottom-right: a glowing red-gold PAPER LANTERN with tassels hanging below, warm light from inside.
+
+Absolutely no text, no watermark, no background scenery, no grid lines.

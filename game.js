@@ -69,6 +69,14 @@ const IMG_SRC = {
   snake1:'assets/sprites/snake_1.png',
   snake2:'assets/sprites/snake_2.png',
   monkey:'assets/sprites/monkey.png',
+  crab:  'assets/sprites/obsA_1.png',
+  cactus:'assets/sprites/obsA_2.png',
+  frog:  'assets/sprites/obsA_3.png',
+  hedge: 'assets/sprites/obsA_4.png',
+  scarecrow:'assets/sprites/obsB_1.png',
+  cone:  'assets/sprites/obsB_2.png',
+  trashcan:'assets/sprites/obsB_3.png',
+  lantern:'assets/sprites/obsB_4.png',
   faceShiba:'assets/sprites/face_shiba.png',
   faceTiger:'assets/sprites/face_tiger.png',
   ground:'assets/sprites/ground.png',
@@ -87,27 +95,28 @@ const IMG_SRC = {
 // ---------- 10 스테이지 여정 (등원길: 정글 → 유치원) ----------
 const STAGE_LEN = 1000;          // 스테이지당 미터
 const TOTAL_M = 10000;           // 완주 거리 (10 스테이지)
+// 각 스테이지는 2~3종의 전용 장애물을 독점 배치 (다양성 + 스테이지 정체성)
 const STAGES = [
   { name: '아침 정글',   icon: '🌿', bg: 'bg',        tint: null,                      amb: 'leaf',
-    set: ['rock','log','plant','branch','snake','bones_line','bones_arc','pow','gold','hole','double_obs','snake_branch','jump_slide'] },
+    set: ['rock','log','plant','branch','snake','stomp','spring_fun','bones_line','bones_arc','pow','gold','hole','double_obs','snake_branch','jump_slide'] },
   { name: '폭포 강가',   icon: '💧', bg: 'bgRiver',   tint: 'rgba(120,200,255,0.07)',  amb: 'mist',
-    set: ['log','hole','mud','toucan','bones_arc','bones_line','pow','gold','arc_hole','mud_rock','slide_jump','double_hole','long_hole'] },
+    set: ['log','hole','mud','toucan','frog','geyser','bones_arc','bones_line','pow','gold','arc_hole','mud_rock','slide_jump','double_hole','long_hole'] },
   { name: '반짝 해변',   icon: '🏖️', bg: 'bgBeach',   tint: 'rgba(255,230,150,0.08)',  amb: 'mist',
-    set: ['rock','boulder','hole','mud','bees','bones_line','bones_arc','pow','gold','hole_rock','double_obs','bees_rock','long_hole'] },
+    set: ['rock','boulder','hole','mud','bees','crab','ball','bones_line','bones_arc','pow','gold','hole_rock','double_obs','bees_rock','long_hole'] },
   { name: '대나무 숲',   icon: '🎋', bg: 'bgBamboo',  tint: 'rgba(120,255,140,0.07)',  amb: 'leaf',
-    set: ['branch','snake','plant','wisp','bones_line','bones_arc','pow','gold','branch_tunnel','snake_branch','jump_slide','double_obs'] },
+    set: ['branch','snake','plant','wisp','pend','stomp','spring_fun','bones_line','bones_arc','pow','gold','branch_tunnel','snake_branch','jump_slide','double_obs'] },
   { name: '시골 마을',   icon: '🏡', bg: 'bgVillage', tint: null,                      amb: 'none',
-    set: ['mud','log','plant','monkey','rock','bones_line','bones_arc','pow','gold','mud_rock','double_obs','hole','toucan_rock'] },
+    set: ['mud','log','plant','monkey','rock','scare','hedge','wall','bones_line','bones_arc','pow','gold','mud_rock','double_obs','hole','toucan_rock'] },
   { name: '노을 들판',   icon: '🌇', bg: 'bgSunset',  tint: 'rgba(255,140,60,0.10)',   amb: 'pollen',
-    set: ['bees','boulder','snake','hole','bones_arc','bones_line','pow','gold','bees_rock','boulder_hole','arc_hole','double_hole'] },
+    set: ['bees','boulder','snake','hole','hedge','wall','scare','bones_arc','bones_line','pow','gold','bees_rock','boulder_hole','arc_hole','double_hole'] },
   { name: '반딧불 숲',   icon: '🌙', bg: 'bgNight',   tint: 'rgba(30,50,140,0.17)',    amb: 'glow',
-    set: ['wisp','branch','toucan','hole','bones_arc','bones_line','pow','gold','branch_tunnel','slide_jump','long_hole','jump_slide'] },
+    set: ['wisp','branch','toucan','hole','pend','geyser','spring_fun','bones_arc','bones_line','pow','gold','branch_tunnel','slide_jump','long_hole','jump_slide'] },
   { name: '붉은 협곡',   icon: '🏜️', bg: 'bgCanyon',  tint: 'rgba(255,120,50,0.09)',   amb: 'pollen',
-    set: ['boulder','rock','hole','snake','bones_line','bones_arc','pow','gold','boulder_hole','hole_rock','double_hole','triple','long_hole'] },
+    set: ['boulder','rock','hole','snake','cactus','geyser','wall','geyser_pair','wall_hole','bones_line','bones_arc','pow','gold','boulder_hole','hole_rock','double_hole','triple','long_hole'] },
   { name: '도시 거리',   icon: '🏙️', bg: 'bgCity',    tint: null,                      amb: 'none',
-    set: ['rock','log','toucan','boulder','double_obs','bones_line','bones_arc','pow','gold','toucan_rock','triple','jump_slide','hole'] },
+    set: ['rock','log','toucan','boulder','cone_row','trash','wall','ball','wall_hole','double_obs','bones_line','bones_arc','pow','gold','toucan_rock','triple','jump_slide','hole'] },
   { name: '유치원 길',   icon: '🏫', bg: 'bgKinder',  tint: 'rgba(255,190,220,0.07)',  amb: 'petal',
-    set: ['bones_line','bones_arc','pow','gold','rock','plant','mud','double_obs'] },
+    set: ['bones_line','bones_arc','pow','gold','rock','plant','mud','spring_fun','cone_row','double_obs'] },
 ];
 const img = {};
 let assetsReady = false;
@@ -369,6 +378,9 @@ function rescaleWorld(oldW, oldSC, oldGroundY) {
     o.x *= rx; o.dw *= rs; o.dh *= rs;
     if (o.barBottom !== undefined) o.barBottom = groundY - (oldGroundY - o.barBottom) * rs;
     if (o.y0 !== undefined) o.y0 = groundY - (oldGroundY - o.y0) * rs;
+    if (o.y !== undefined) o.y = groundY - (oldGroundY - o.y) * rs;
+    if (o.fy !== undefined) o.fy = groundY - (oldGroundY - o.fy) * rs;
+    if (o.pivY !== undefined) { o.pivY = groundY - 300 * SC; o.len = 224 * SC; }
   }
   for (const h of G.holes) { h.x *= rx; h.w *= rs; }
   for (const b of G.bones) { b.x *= rx; b.y = groundY - (oldGroundY - b.y) * rs; }
@@ -494,9 +506,11 @@ function drawCutIn() {
   ctx.globalAlpha = 1;
 }
 function resetGame(fromM = runFrom) {
-  G.speed = 450 * SC;
-  G.baseSpeed = 450 * SC;
   G.maxSpeed = 1045 * SC;
+  // 체크포인트 시작 시 해당 지점의 자연스러운 주행 속도로 (저속 점프 리치 부족 방지)
+  const natural = Math.min(G.maxSpeed, (450 + fromM * 0.8) * SC);
+  G.speed = natural;
+  G.baseSpeed = natural;
   cam.z = 1; cam.punchT = 0; cam.y = 0;
   ts = 1; tsHold = 0;
   G.cutIn = null;
@@ -843,6 +857,11 @@ const OBS_DEF = {
   rock:  { dw: 96,  hbx: 0.20, hby: 0.76 },
   log:   { dw: 128, hbx: 0.18, hby: 0.74 },
   plant: { dw: 88,  hbx: 0.24, hby: 0.79 },
+  // 신규 정적 장애물 (스테이지 전용)
+  cactus:    { dw: 76, hbx: 0.30, hby: 0.92 },  // 협곡 — 키가 커서 정확한 점프 필요
+  scarecrow: { dw: 88, hbx: 0.30, hby: 0.84 },  // 시골마을
+  cone:      { dw: 54, hbx: 0.20, hby: 0.78 },  // 도시 — 작아서 연속 배치
+  trashcan:  { dw: 74, hbx: 0.20, hby: 0.80 },  // 도시
 };
 function addObstacle(kind, x) {
   const def = OBS_DEF[kind];
@@ -885,6 +904,36 @@ function addMonkey(x) {
 }
 function addWisp(x) {
   G.obstacles.push({ kind: 'wisp', x, dw: 52 * SC, dh: 52 * SC, y0: groundY - 92 * SC, t: Math.random() * 6, minClear: 1e9 });
+}
+// ---------- 신규 메커니즘 장애물 ----------
+function addCrab(x) { // 옆걸음으로 다가오는 게 (해변)
+  const r = img.crab && img.crab.width ? img.crab.height / img.crab.width : 0.8;
+  G.obstacles.push({ kind: 'crab', x, dw: 76 * SC, dh: 76 * SC * r, t: Math.random() * 6, minClear: 1e9 });
+}
+function addFrog(x) { // 주기적으로 폴짝 뛰는 개구리 (강가)
+  const r = img.frog && img.frog.width ? img.frog.height / img.frog.width : 0.8;
+  G.obstacles.push({ kind: 'frog', x, dw: 72 * SC, dh: 72 * SC * r, y: groundY, vy: 0, hopT: 0.9 + Math.random() * 0.8, minClear: 1e9 });
+}
+function addHedge(x) { // 빠르게 굴러오는 고슴도치 (마을/들판)
+  G.obstacles.push({ kind: 'hedge', x, dw: 62 * SC, dh: 62 * SC, rot: 0, minClear: 1e9 });
+}
+function addBall(x) { // 튀는 비치볼 (해변/도시)
+  G.obstacles.push({ kind: 'ball', x, dw: 64 * SC, dh: 64 * SC, y: groundY - 220 * SC, vy: 0, minClear: 1e9 });
+}
+function addGeyser(x) { // 간헐천: 경고(거품) → 분출(위험) 사이클
+  G.obstacles.push({ kind: 'geyser', x, dw: 78 * SC, dh: 20 * SC, t: Math.random() * 1.2, minClear: 1e9 });
+}
+function addStomper(x) { // 낙하물: 접근 시 그림자 경고 후 떨어짐
+  G.obstacles.push({ kind: 'stomper', x, dw: 58 * SC, dh: 58 * SC, fy: -140 * SC, vy: 0, falling: false, landed: -1, minClear: 1e9 });
+}
+function addPend(x) { // 진자 등불: 흔들림 아래로 슬라이드 통과
+  G.obstacles.push({ kind: 'pend', x, dw: 50 * SC, dh: 50 * SC, t: Math.random() * 6, pivY: groundY - 300 * SC, len: 224 * SC, minClear: 1e9 });
+}
+function addWall(x) { // 높은 벽: 2단 점프 필요 (스테이지별 스킨)
+  G.obstacles.push({ kind: 'wall', x, dw: 88 * SC, dh: 190 * SC, minClear: 1e9 });
+}
+function addSpring(x) { // 점프 버섯: 밟으면 크게 도약 (무해 + 재미)
+  G.obstacles.push({ kind: 'spring', x, dw: 60 * SC, dh: 44 * SC, t: 0, minClear: 1e9 });
 }
 function boneArc(x, arc) {
   const n = 3 + (Math.random() * 3 | 0);
@@ -1017,6 +1066,47 @@ const CHUNKS = [
       addBees(x + gap);
       return gap + 170 * SC;
   } },
+  // ---------- 신규 장애물 청크 ----------
+  { id: 'crab', d: 2, fn(x) { addCrab(x + 90 * SC); return 170 * SC; } },
+  { id: 'cactus', d: 3, fn(x) { addObstacle('cactus', x); if (Math.random() < 0.4) boneArc(x + 10 * SC, true); return 150 * SC; } },
+  { id: 'frog', d: 3, fn(x) { addFrog(x + 70 * SC); return 180 * SC; } },
+  { id: 'hedge', d: 3, fn(x) { addHedge(x + 160 * SC); return 200 * SC; } },
+  { id: 'scare', d: 2, fn(x) { addObstacle('scarecrow', x); if (Math.random() < 0.4) boneArc(x + 20 * SC, true); return 150 * SC; } },
+  { id: 'trash', d: 2, fn(x) { addObstacle('trashcan', x); return 150 * SC; } },
+  { id: 'cone_row', d: 2, fn(x) {
+      const g = 150 * SC + G.speed * 0.10;
+      addObstacle('cone', x); addObstacle('cone', x + g); addObstacle('cone', x + g * 2);
+      return g * 2 + 100 * SC;
+  } },
+  { id: 'geyser', d: 3, fn(x) { addGeyser(x); if (Math.random() < 0.5) boneArc(x - 20 * SC, true); return 180 * SC; } },
+  { id: 'geyser_pair', d: 5, fn(x) {
+      addGeyser(x);
+      const g = 330 * SC + G.speed * 0.30;
+      addGeyser(x + g);
+      G.obstacles[G.obstacles.length - 1].t = G.obstacles[G.obstacles.length - 2].t + 1.2; // 위상 엇갈림
+      return g + 180 * SC;
+  } },
+  { id: 'stomp', d: 3, fn(x) { addStomper(x); return 170 * SC; } },
+  { id: 'pend', d: 3, fn(x) { addPend(x + 50 * SC); return 240 * SC; } },
+  { id: 'wall', d: 3, fn(x) { addWall(x); if (Math.random() < 0.5) boneArc(x - 30 * SC, true); return 210 * SC; } },
+  { id: 'wall_hole', d: 5, fn(x) {
+      addWall(x);
+      const g = 290 * SC + G.speed * 0.36;
+      const w = 128 * SC + G.speed * 0.07;
+      G.holes.push({ x: x + g, w });
+      return g + w + 60 * SC;
+  } },
+  { id: 'ball', d: 3, fn(x) { addBall(x + 170 * SC); return 220 * SC; } },
+  { id: 'spring_fun', d: 1, fn(x) {
+      addSpring(x);
+      // 높은 뼈다귀 보상 아치 (버섯 도약으로만 닿음)
+      const n = 5;
+      for (let i = 0; i < n; i++) {
+        const t = i / (n - 1);
+        G.bones.push({ x: x + 100 * SC + i * 62 * SC, y: groundY - 260 * SC - Math.sin(t * Math.PI) * 70 * SC, t: Math.random() * 6 });
+      }
+      return 420 * SC;
+  } },
   // 튜토리얼 전용
   { id: 'branch_intro', d: 9, fn(x) {
       addBranch(x);
@@ -1036,7 +1126,9 @@ function spawnChunk() {
       G.hints.push({ x: x + 10 * SC, y: groundY - 250 * SC, txt: '오른쪽 탭! ⬆ 점프' });
     }
   } else {
-    const maxD = bandFor(G.worldX);
+    let maxD = bandFor(G.worldX);
+    // 체크포인트 이어달리기 직후 웜업 (퍼크 없이 최고 밴드 직행 방지)
+    if (runFrom > 0 && G.worldX - runFrom < 250) maxD = Math.min(maxD, 3);
     const stageSet = STAGES[Math.min(G.stage, 9)].set;
     let pool = CHUNKS.filter(c =>
       c.d <= maxD && c.id !== G.lastChunk && (c.tag !== 'pow' || G.powCd <= 0) &&
@@ -1106,6 +1198,40 @@ function obstacleBoxes(o) {
     const y = o.y0 + Math.sin(o.t * 4.2) * 44 * SC;
     return [{ x: o.x + o.dw * 0.15, y: y - o.dh * 0.35, w: o.dw * 0.7, h: o.dh * 0.7 }];
   }
+  if (o.kind === 'crab') {
+    return [{ x: o.x + o.dw * 0.16, y: groundY - o.dh * 0.60, w: o.dw * 0.68, h: o.dh * 0.60 }];
+  }
+  if (o.kind === 'hedge') {
+    return [{ x: o.x + o.dw * 0.15, y: groundY - o.dh * 0.62, w: o.dw * 0.70, h: o.dh * 0.62 }];
+  }
+  if (o.kind === 'frog') {
+    return [{ x: o.x + o.dw * 0.18, y: o.y - o.dh * 0.60, w: o.dw * 0.64, h: o.dh * 0.60 }];
+  }
+  if (o.kind === 'ball') {
+    return [{ x: o.x + o.dw * 0.12, y: o.y - o.dw * 0.76, w: o.dw * 0.76, h: o.dw * 0.76 }];
+  }
+  if (o.kind === 'geyser') {
+    const ph = o.t % 2.4;
+    if (ph > 0.85 && ph < 1.75) { // 분출 중에만 위험
+      return [{ x: o.x + o.dw * 0.24, y: groundY - 152 * SC, w: o.dw * 0.52, h: 152 * SC }];
+    }
+    return [];
+  }
+  if (o.kind === 'stomper') {
+    if (o.falling) return [{ x: o.x + o.dw * 0.12, y: o.fy - o.dw * 0.72, w: o.dw * 0.76, h: o.dw * 0.72 }];
+    if (o.landed > 0.3) return [{ x: o.x + o.dw * 0.15, y: groundY - o.dw * 0.5, w: o.dw * 0.7, h: o.dw * 0.5 }];
+    return [];
+  }
+  if (o.kind === 'pend') {
+    const ang = Math.sin(o.t * 2.35) * 0.85;
+    const bx = o.x + Math.sin(ang) * o.len;
+    const by = o.pivY + Math.cos(ang) * o.len;
+    return [{ x: bx - 22 * SC, y: by - 22 * SC, w: 44 * SC, h: 44 * SC }];
+  }
+  if (o.kind === 'wall') {
+    return [{ x: o.x + o.dw * 0.18, y: groundY - o.dh, w: o.dw * 0.64, h: o.dh }];
+  }
+  if (o.kind === 'spring') return []; // 무해
   const def = OBS_DEF[o.kind];
   return [{
     x: o.x + o.dw * def.hbx, y: groundY - o.dh * def.hby,
@@ -1448,7 +1574,53 @@ function update(dt) {
     o.x -= dx;
     if (o.kind === 'toucan') { o.x -= 105 * SC * dt; o.t += dt; }
     else if (o.kind === 'boulder') { o.x -= 150 * SC * dt; o.rot -= dt * 7; }
-    else if (o.kind === 'snake' || o.kind === 'bees' || o.kind === 'wisp') o.t += dt;
+    else if (o.kind === 'snake' || o.kind === 'bees' || o.kind === 'wisp' || o.kind === 'geyser' || o.kind === 'pend') o.t += dt;
+    else if (o.kind === 'crab') { o.x -= 55 * SC * dt; o.t += dt; }
+    else if (o.kind === 'hedge') { o.x -= 135 * SC * dt; o.rot -= dt * 10; }
+    else if (o.kind === 'frog') {
+      o.hopT -= dt;
+      if (o.hopT <= 0 && o.y >= groundY) { o.vy = -640 * SC; sfx.slide(); dust(o.x + o.dw / 2, groundY, 3); }
+      if (o.vy !== 0 || o.y < groundY) {
+        o.vy += 2600 * SC * dt;
+        o.y += o.vy * dt;
+        o.x -= 95 * SC * dt; // 점프 중 전진
+        if (o.y >= groundY) { o.y = groundY; o.vy = 0; o.hopT = 1.3 + Math.random() * 0.7; dust(o.x + o.dw / 2, groundY, 3); }
+      }
+    }
+    else if (o.kind === 'ball') {
+      o.vy += 2100 * SC * dt;
+      o.y += o.vy * dt;
+      o.x -= 60 * SC * dt;
+      if (o.y >= groundY - 2) { o.y = groundY - 2; o.vy = -(640 + Math.random() * 100) * SC; dust(o.x + o.dw / 2, groundY, 2); }
+    }
+    else if (o.kind === 'stomper') {
+      if (o.landed < 0 && !o.falling && o.x - p.x < 430 * SC && o.x - p.x > -40 * SC) o.falling = true;
+      if (o.falling) {
+        o.vy += 3000 * SC * dt;
+        o.fy += o.vy * dt;
+        if (o.fy >= groundY) {
+          o.fy = groundY; o.falling = false; o.landed = 0.5;
+          dust(o.x + o.dw / 2, groundY, 8);
+          G.shake = Math.max(G.shake, 0.14);
+          sfx.hit();
+        }
+      }
+      if (o.landed > 0) { o.landed -= dt; if (o.landed <= 0) o.dead = true; }
+    }
+    else if (o.kind === 'spring') {
+      if (o.t > 0) o.t -= dt;
+      // 밟으면 크게 도약 (무해)
+      const pb0 = playerBox();
+      if (p.vy >= -50 && pb0.x < o.x + o.dw && pb0.x + pb0.w > o.x && p.y > groundY - 70 * SC) {
+        if (o.t <= 0) {
+          o.t = 0.4;
+          p.vy = -1500 * SC; p.onGround = false; p.jumps = 1; p.fastFall = false; p.sliding = false;
+          sfx.djump(); blip && 0;
+          sparkle(o.x + o.dw / 2, groundY - 30 * SC, 10, '190,255,190');
+          pop(p.x, p.y - p.h * 1.2, '슝~!! 🍄', '#b8ffb0');
+        }
+      }
+    }
     else if (o.kind === 'monkey') {
       o.t += dt;
       // 플레이어 접근 시 코코넛 투척 (한 번)
@@ -2031,6 +2203,221 @@ function drawObstacles() {
       ctx.fill();
       ctx.restore();
       ctx.globalAlpha = 1;
+    } else if (o.kind === 'crab') {
+      const im = img.crab;
+      const wig = Math.sin(o.t * 9) * 4 * SC;
+      if (im && im.width) {
+        ctx.save();
+        ctx.translate(o.x + o.dw / 2 + wig, groundY);
+        ctx.rotate(Math.sin(o.t * 9) * 0.06);
+        ctx.drawImage(im, -o.dw / 2, -o.dh + 3 * SC, o.dw, o.dh);
+        ctx.restore();
+      }
+    } else if (o.kind === 'hedge') {
+      const im = img.hedge;
+      if (im && im.width) {
+        ctx.save();
+        ctx.translate(o.x + o.dw / 2, groundY - o.dh * 0.45);
+        ctx.rotate(o.rot);
+        ctx.drawImage(im, -o.dw / 2, -o.dh / 2, o.dw, o.dh);
+        ctx.restore();
+      }
+    } else if (o.kind === 'frog') {
+      const im = img.frog;
+      if (im && im.width) {
+        const crouch = o.y >= groundY && o.hopT < 0.35 ? 1 - o.hopT / 0.35 : 0; // 도약 전 웅크림
+        ctx.save();
+        ctx.translate(o.x + o.dw / 2, o.y);
+        ctx.scale(1 + crouch * 0.12, 1 - crouch * 0.18);
+        ctx.drawImage(im, -o.dw / 2, -o.dh + 3 * SC, o.dw, o.dh);
+        ctx.restore();
+      }
+    } else if (o.kind === 'ball') {
+      // 비치볼 (스트라이프 원)
+      const r = o.dw * 0.42;
+      ctx.save();
+      ctx.translate(o.x + o.dw / 2, o.y - r);
+      ctx.rotate(-(G.worldX * 0.05 + o.x * 0.01));
+      const cols = ['#ff5c5c', '#fff', '#4db8ff', '#fff', '#ffd75e', '#fff'];
+      for (let i = 0; i < 6; i++) {
+        ctx.fillStyle = cols[i];
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, r, i * Math.PI / 3, (i + 1) * Math.PI / 3);
+        ctx.fill();
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.4)';
+      ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.28, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    } else if (o.kind === 'geyser') {
+      const ph = o.t % 2.4;
+      const si2 = Math.min(G.stage, 9);
+      const col = si2 === 7 ? ['255,190,90', '255,120,40'] : si2 === 6 ? ['150,255,220', '60,220,180'] : ['170,220,255', '90,170,255'];
+      // 바닥 웅덩이
+      ctx.fillStyle = `rgba(${col[1]},0.35)`;
+      ctx.beginPath();
+      ctx.ellipse(o.x + o.dw / 2, groundY + 2 * SC, o.dw * 0.5, 8 * SC, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (ph < 0.85) { // 경고: 끓는 거품
+        for (let i = 0; i < 3; i++) {
+          const bt = (ph * 3 + i * 0.7) % 1;
+          ctx.fillStyle = `rgba(${col[0]},${0.5 * (1 - bt)})`;
+          ctx.beginPath();
+          ctx.arc(o.x + o.dw * (0.3 + i * 0.2), groundY - bt * 18 * SC, (3 + bt * 4) * SC, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (ph < 1.75) { // 분출!
+        const k = Math.sin((ph - 0.85) / 0.9 * Math.PI);
+        const jh = 158 * SC * Math.min(1, k * 1.6);
+        const jg = ctx.createLinearGradient(0, groundY, 0, groundY - jh);
+        jg.addColorStop(0, `rgba(${col[1]},0.9)`);
+        jg.addColorStop(1, `rgba(${col[0]},0.15)`);
+        ctx.fillStyle = jg;
+        ctx.beginPath();
+        if (ctx.roundRect) ctx.roundRect(o.x + o.dw * 0.22, groundY - jh, o.dw * 0.56, jh, 10 * SC);
+        else ctx.rect(o.x + o.dw * 0.22, groundY - jh, o.dw * 0.56, jh);
+        ctx.fill();
+        ctx.fillStyle = `rgba(${col[0]},0.8)`;
+        for (let i = 0; i < 4; i++) {
+          ctx.beginPath();
+          ctx.arc(o.x + o.dw * (0.25 + Math.random() * 0.5), groundY - jh + (Math.random() - 0.2) * 16 * SC, (2.5 + Math.random() * 3) * SC, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (o.kind === 'stomper') {
+      const si3 = Math.min(G.stage, 9);
+      // 그림자 경고 (떨어지는 중 커짐)
+      if (o.falling || o.landed < 0) {
+        const prox = o.falling ? Math.min(1, (o.fy + 140 * SC) / (groundY + 140 * SC)) : 0.25;
+        ctx.fillStyle = `rgba(0,0,0,${0.14 + prox * 0.22})`;
+        ctx.beginPath();
+        ctx.ellipse(o.x + o.dw / 2, groundY + 3 * SC, o.dw * (0.30 + prox * 0.25), 7 * SC, 0, 0, Math.PI * 2);
+        ctx.fill();
+        if (!o.falling) {
+          ctx.fillStyle = 'rgba(255,80,60,0.85)';
+          ctx.font = `900 ${22 * SC}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.fillText('❗', o.x + o.dw / 2, groundY - 40 * SC - Math.sin(performance.now() * 0.008) * 5 * SC);
+        }
+      }
+      // 낙하물 본체 (스테이지 스킨: 코코넛/화분/대나무)
+      const oy = o.landed > 0 ? groundY : o.fy;
+      if (o.landed < 0 && !o.falling) { /* 대기 중엔 화면 밖 */ }
+      else {
+        ctx.save();
+        ctx.translate(o.x + o.dw / 2, oy - o.dw * 0.36);
+        if (si3 === 4) { // 화분
+          ctx.fillStyle = '#c96f4a';
+          ctx.beginPath();
+          ctx.moveTo(-o.dw * 0.34, -o.dw * 0.3); ctx.lineTo(o.dw * 0.34, -o.dw * 0.3);
+          ctx.lineTo(o.dw * 0.24, o.dw * 0.34); ctx.lineTo(-o.dw * 0.24, o.dw * 0.34);
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle = '#7dbb52';
+          ctx.beginPath(); ctx.arc(0, -o.dw * 0.4, o.dw * 0.22, 0, Math.PI * 2); ctx.fill();
+        } else if (si3 === 3) { // 대나무 토막
+          ctx.fillStyle = '#79b95c';
+          if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(-o.dw * 0.18, -o.dw * 0.5, o.dw * 0.36, o.dw, 6 * SC); ctx.fill(); }
+          else ctx.fillRect(-o.dw * 0.18, -o.dw * 0.5, o.dw * 0.36, o.dw);
+          ctx.strokeStyle = '#4e8a3a'; ctx.lineWidth = 2.5 * SC;
+          ctx.beginPath(); ctx.moveTo(-o.dw * 0.18, 0); ctx.lineTo(o.dw * 0.18, 0); ctx.stroke();
+        } else { // 코코넛
+          ctx.fillStyle = '#6b4a28';
+          ctx.beginPath(); ctx.arc(0, 0, o.dw * 0.36, 0, Math.PI * 2); ctx.fill();
+          ctx.fillStyle = 'rgba(255,255,255,0.22)';
+          ctx.beginPath(); ctx.arc(-o.dw * 0.12, -o.dw * 0.12, o.dw * 0.14, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+      }
+    } else if (o.kind === 'pend') {
+      const ang = Math.sin(o.t * 2.35) * 0.85;
+      const bx = o.x + Math.sin(ang) * o.len;
+      const by = o.pivY + Math.cos(ang) * o.len;
+      // 로프 + 지지대
+      ctx.strokeStyle = 'rgba(60,45,25,0.95)';
+      ctx.lineWidth = 3.5 * SC;
+      ctx.beginPath();
+      ctx.moveTo(o.x, Math.max(0, o.pivY));
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(o.x, 0); ctx.lineTo(o.x, Math.max(0, o.pivY));
+      ctx.stroke();
+      const im = img.lantern;
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.rotate(ang * 0.5);
+      if (im && im.width) {
+        const lw = 46 * SC, lh = lw * (im.height / im.width);
+        ctx.shadowColor = 'rgba(255,180,80,0.8)';
+        ctx.shadowBlur = 16 * SC;
+        ctx.drawImage(im, -lw / 2, -lh * 0.4, lw, lh);
+      } else {
+        ctx.fillStyle = '#ff8a3d';
+        ctx.beginPath(); ctx.arc(0, 0, 20 * SC, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    } else if (o.kind === 'wall') {
+      const si4 = Math.min(G.stage, 9);
+      ctx.save();
+      ctx.translate(o.x, groundY);
+      if (si4 === 8) { // 도시: 상자 3단
+        for (let i = 0; i < 3; i++) {
+          ctx.fillStyle = i % 2 ? '#a5773f' : '#8a6234';
+          ctx.strokeStyle = '#5d3f22'; ctx.lineWidth = 2.5 * SC;
+          const bw2 = o.dw * (0.94 - i * 0.06), bh2 = o.dh / 3;
+          const bx2 = (o.dw - bw2) / 2, by2 = -bh2 * (i + 1);
+          ctx.fillRect(bx2, by2, bw2, bh2);
+          ctx.strokeRect(bx2, by2, bw2, bh2);
+          ctx.beginPath();
+          ctx.moveTo(bx2, by2); ctx.lineTo(bx2 + bw2, by2 + bh2);
+          ctx.moveTo(bx2 + bw2, by2); ctx.lineTo(bx2, by2 + bh2);
+          ctx.stroke();
+        }
+      } else if (si4 === 4 || si4 === 5) { // 마을/들판: 건초 더미
+        ctx.fillStyle = '#d9b64e';
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(o.dw * 0.05, -o.dh, o.dw * 0.9, o.dh, 16 * SC); ctx.fill(); }
+        else ctx.fillRect(o.dw * 0.05, -o.dh, o.dw * 0.9, o.dh);
+        ctx.strokeStyle = 'rgba(150,110,30,0.7)'; ctx.lineWidth = 2 * SC;
+        for (let i = 1; i < 5; i++) {
+          ctx.beginPath(); ctx.moveTo(o.dw * 0.1, -o.dh * i / 5); ctx.lineTo(o.dw * 0.9, -o.dh * i / 5); ctx.stroke();
+        }
+      } else { // 협곡 등: 바위 첨탑
+        ctx.fillStyle = si4 === 7 ? '#c9663f' : '#8a7a6a';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(o.dw * 0.18, -o.dh * 0.85);
+        ctx.lineTo(o.dw * 0.5, -o.dh);
+        ctx.lineTo(o.dw * 0.82, -o.dh * 0.8);
+        ctx.lineTo(o.dw, 0);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(o.dw * 0.5, -o.dh); ctx.lineTo(o.dw * 0.82, -o.dh * 0.8); ctx.lineTo(o.dw, 0); ctx.lineTo(o.dw * 0.5, 0);
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    } else if (o.kind === 'spring') {
+      // 점프 버섯
+      const sq = o.t > 0 ? Math.sin(o.t / 0.4 * Math.PI) : 0;
+      ctx.save();
+      ctx.translate(o.x + o.dw / 2, groundY);
+      ctx.scale(1 + sq * 0.25, 1 - sq * 0.3);
+      ctx.fillStyle = '#e8dcc8';
+      ctx.fillRect(-o.dw * 0.12, -o.dh * 0.5, o.dw * 0.24, o.dh * 0.5);
+      const cg = ctx.createRadialGradient(0, -o.dh * 0.55, 3, 0, -o.dh * 0.55, o.dw * 0.55);
+      cg.addColorStop(0, '#ff8a8a');
+      cg.addColorStop(1, '#e04848');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.ellipse(0, -o.dh * 0.55, o.dw * 0.52, o.dh * 0.42, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      for (const [dxs, dys, rs2] of [[-0.25, -0.72, 0.09], [0.15, -0.85, 0.07], [0.3, -0.6, 0.06]]) {
+        ctx.beginPath();
+        ctx.arc(o.dw * dxs, o.dh * dys, o.dw * rs2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
     } else {
       const im = img[o.kind];
       if (im && im.width) ctx.drawImage(im, o.x, groundY - o.dh + 4 * SC, o.dw, o.dh);
@@ -2718,9 +3105,9 @@ if (location.search.indexOf('test') >= 0) {
           const react = G.speed * reactSec + 40 * SC;
           let jumpD = 1e9, slideD = 1e9, slideO = null;
           for (const o of G.obstacles) {
-            if (o.hitDone || o.kind === 'mud') continue;
+            if (o.hitDone || o.kind === 'mud' || o.kind === 'spring') continue;
             const d = o.x - (p.x + p.w * 0.3);
-            if (o.kind === 'branch' || o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp') {
+            if (o.kind === 'branch' || o.kind === 'toucan' || o.kind === 'bees' || o.kind === 'wisp' || o.kind === 'pend') {
               // 사람처럼 장애물이 완전히 지나갈 때까지 숙이기 유지
               if (d > -(o.dw + 60 * SC) && d < slideD) { slideD = d; slideO = o; }
             } else if (d >= -60 * SC) jumpD = Math.min(jumpD, d);
